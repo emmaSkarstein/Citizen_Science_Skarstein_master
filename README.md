@@ -1,4 +1,4 @@
-# Citizen_Science_master_thesis_Skarstein
+# Citizen_Science_Skarstein_master
 All code and associated files for the master thesis of Emma Skarstein. 
 
 Following the structure suggested by the British Ecological Society we have the following folders:

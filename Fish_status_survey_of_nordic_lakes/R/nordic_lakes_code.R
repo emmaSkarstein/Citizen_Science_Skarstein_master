@@ -1,11 +1,15 @@
+############################################################################
+# Fish status survey of nordic lakes
+############################################################################
+
 library(ggplot2)
 library(maps)
 library(dplyr)
 
 
 # Load occurrence data and lakes
-occ <- read.table("data/occurrence.txt", header = TRUE, sep = "\t")
-events <- read.table("data/event.txt", header = TRUE, sep = "\t")
+occ <- read.table("Fish_status_survey_of_nordic_lakes/data/occurrence.txt", header = TRUE, sep = "\t")
+events <- read.table("Fish_status_survey_of_nordic_lakes/data/event.txt", header = TRUE, sep = "\t")
 lakes <- readRDS("data/lake_polygons.rds")
 
 colnames(occ)

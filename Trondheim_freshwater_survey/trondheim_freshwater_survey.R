@@ -16,7 +16,6 @@ data <- read.table("Trondheim_freshwater_survey/data/occurrence.txt", header = T
 #lakes <- readRDS("data/lake_polygons.rds")
 
 
-
 #----------------------------------------------------------------------------
 # Exploring data
 #----------------------------------------------------------------------------

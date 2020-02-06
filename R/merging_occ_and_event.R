@@ -3,18 +3,16 @@
 ############################################################################
 
 
-merge_occ_event <- function(file_path, file_type, sep = "\t", quote = ""){
+merge_occ_event <- function(file_path, file_type, sep = "\t", quote = "\"'"){
   occ_path <- paste0(file_path, "/occurrence.", file_type)
   event_path <- paste0(file_path, "/event.", file_type)
-  print(occ_path)
-  print("\n")
-  print(event_path)
+
   occ <- read.table(occ_path, header = TRUE, sep = sep, quote = quote, 
                     fill = FALSE)
   event <- read.table(event_path, header = TRUE,sep = sep, quote = quote, 
                       fill = FALSE)
   
-  data <- merge(occ, events, by = "eventID")
+  data <- merge(occ, event, by = "eventID")
   
   saveRDS(data, paste0(file_path, "/merged.rds"))
 }
@@ -25,7 +23,7 @@ merge_occ_event(file_path = "NORS/data", file_type = "csv", sep = ",")
 
 #---------------------------------------------------------------------------
 # PIKE
-merge_occ_event(file_path = "PIKE/data", file_type = "txt")
+merge_occ_event(file_path = "PIKE/data", file_type = "txt", quote = "")
 
 #---------------------------------------------------------------------------
 # Kautokeino

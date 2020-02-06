@@ -9,26 +9,63 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Introducing the data sets
+# Data preparation
 
-```{r}
+We will be using the following packages:
+```{r, message = FALSE}
 library(ggplot2)
 library(maps)
 library(dplyr)
 library(ggmap)
 
-NORS <-  readRDS("NORS/data/merged.rds")
-
-PIKE <-  readRDS("PIKE/data/merged.rds")
-
-kautokeino_data <- 
-  
-trondheim_data <-  readRDS("Trondheim_freshwater_survey/data/merged.rds")
-
-nordic_survey <- readRDS("Fish_status_survey_of_nordic_lakes/data/merged.rds")
-
-transcribed_gillnet <-  readRDS("Transcribed_gillnet_test_fishing_data_norway/data/merged.rds")
-
-
 ```
+
+## Downloading
+
+For downloading all data sets used here, follow these links:
+
+- **NORS:** https://ntnu.box.com/shared/static/bn44f3aulesciijjb9dq4o72add25vyt.zip 
+
+- **PIKE:** https://gbif.vm.ntnu.no/ipt/resource?r=pike
+
+- **Kautokeino:** https://gbif.vm.ntnu.no/ipt/resource?r=kautokeino_fish_inventory (we don't really have this data right now)
+
+- **Trondheim:** https://gbif.vm.ntnu.no/ipt/resource?r=freshwater_survey_occurrences_trondheim_municipality
+
+- **Nordic presence absence:** https://gbif.vm.ntnu.no/ipt/resource?r=fish_status_survey_of_nordic_lakes
+
+- **Transcriptions of Norwegian gillnet test-fishing:** https://gbif.vm.ntnu.no/ipt/resource?r=transcribed_gillnet_test_fishing_data_norway
+
+- **Citizen science observations:** (Norwegian and Swedish species observation services and iNaturalist) To download from GBIF, use dataset key *b124e1e0-4755-430f-9eab-894f25a9b59c* for Norway, or *38b4c89f-584c-41bb-bd8f-cd1def33e92f* for Sweden. Note that this gives all species, not only fish, so filters for specific species of interest should also be provided. See code `downloading_CS_observations.R`.
+
+- **Lake polygons Fennoscandia:** https://bird.unit.no/resources/9b27e8f0-55dd-442c-be73-26781dad94c8/content 
+
+
+
+## Merging events and occurrences
+For some of the data sets, we need to merge occurrence- and event-files. This is done easily by merging by `eventID` once both files are loaded into *R*:
+```{r, eval = FALSE}
+merged_data <- merge(occurrence, event, by = "eventID")
+```
+
+See details in the file `merging_occ_and_event.R`. I store the merged datasets in `data`-folders withing each dataset's individual folder, se the section below, where we load the data, for the specific file paths.
+
+```{r, eval = FALSE}
+#NORS <- readRDS("NORS/data/merged.rds")
+#PIKE <- readRDS("PIKE/data/merged.rds")
+#kautokeino_data <- 
+trondheim_data <- readRDS("Trondheim_freshwater_survey/data/occurrence.rds")
+nordic_survey <- readRDS("Fish_status_survey_of_nordic_lakes/data/merged.rds")
+transcribed_gillnet <-  readRDS("Transcribed_gillnet_test_fishing_data_norway/data/merged.rds")
+artsobsNO <- readRDS("Nordic_Species_Observation_Services/GBIF_download_Norge.rds")
+artobsSE <- readRDS("Nordic_Species_Observation_Services/GBIF_download_Sverige.rds")
+```
+
+Finally! Now we can go on to look at these datasets.
+
+# Exploring the data
+
+
+
+
 

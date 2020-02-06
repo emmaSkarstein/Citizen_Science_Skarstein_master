@@ -19,7 +19,7 @@ length(unique(occ$eventID))
 
 data <- merge(occ, events, by = "eventID")
 
-# Selecting only the variables we need
+# Looking at data
 year_counts <- count(data, year) %>% filter(year>=1800)
 
 ggplot(year_counts, aes(x = year, y = n)) + 
@@ -28,14 +28,13 @@ ggplot(year_counts, aes(x = year, y = n)) +
   ylab("Number of observations")
 
 
-
 # We see that most of the observations are in 1996, so we select only these.
 
 data96 <- data %>% filter(year==1996)
 
-dataNO <- data96 %>% filter(countryCode = "NO")
-dataSE <- data96 %>% filter(countryCode = "SE")
-dataFI <- data96 %>% filter(countryCode = "FI")
+dataNO <- data96 %>% filter(countryCode == "NO")
+dataSE <- data96 %>% filter(countryCode == "SE")
+dataFI <- data96 %>% filter(countryCode == "FI")
 
 test <- data96 %>% filter(grepl('trutta', scientificName))
 length(unique(data96$waterBody))
@@ -43,13 +42,11 @@ length(unique(data96$waterBody))
 ## Plot observations
 ##-----------------------------------------------------------------------------------
 # Load Norway-map
-map <- map_data("world", region = "Norway(?!:Svalbard)") 
-
-theme_set(theme_light() + theme(aspect.ratio = .70))
+norway <- map_data("world", region = "Norway(?!:Svalbard)") 
 
 ggplot(dataNO) +
-  geom_map(data = map, map = map, aes(long, lat, map_id=region), 
-           color="#2b2b2b", fill = "white") + 
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color="#2b2b2b", fill = "white") + 
   geom_point(aes(x = decimalLongitude, y = decimalLatitude, color = occurrenceStatus), 
              alpha = 0.6, size = 0.5) +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
@@ -64,9 +61,11 @@ occ_list <- match_to_lake(dataNO, lakes)
 
 occ_matched <- occ_list[[1]]
 occ_w_lakes <- occ_list[[2]]
-saveRDS(occ_matched, "data/occ_matched.rds")
-saveRDS(occ_w_lakes, "data/occ_w_lakes.rds")
+saveRDS(occ_matched, "Fish_status_survey_of_nordic_lakes/data/occ_matched.rds")
+saveRDS(occ_w_lakes, "Fish_status_survey_of_nordic_lakes/data/occ_w_lakes.rds")
 
+
+occ_matched <- readRDS("Fish_status_survey_of_nordic_lakes/data/occ_matched.rds")
 str(occ_matched)
 occ_matched$waterBodyID <- as.factor(occ_matched$waterBodyID)
 
@@ -76,14 +75,14 @@ length(unique(occ_matched$waterBodyID))
 ##------------------------------------------------------------------------
 trout <- occ_matched %>% filter(grepl('trutta', scientificName))
 
+# Point map
 ggplot(trout) +
-  geom_map(data = map, map = map, aes(long, lat, map_id=region), 
-           color="#2b2b2b", fill = "white") + 
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color="#2b2b2b", fill = "white") + 
   geom_point(aes(x = decimalLongitude, y = decimalLatitude, color = occurrenceStatus), 
              alpha = 0.6, size = 0.5) +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
   guides(colour = guide_legend(override.aes = list(size=2))) 
-
 
 
 ##-----------------------------------------------------------------------------------
@@ -101,6 +100,14 @@ summary(model2)
 
 # Model fitting in INLA
 library(INLA)
+formula = Response ~ Temperature(model="iid")
+mod.sst = inla(formula,data=inlasst,family="binomial",Ntrials=n)
+
+inla_mod <- inla(occurrenceStatus ~ decimalLatitude, family = "binomial", data = trout, Ntrials = n)
 
 inla_mod <- inla(occurrenceStatus ~ decimalLongitude + decimalLatitude, 
-     family = c('binomial'), data = trout)
+     family = "binomial", data = trout, Ntrials = n)
+
+class(trout$occurrenceStatus)
+class(trout$decimalLatitude)
+class(trout)

@@ -54,7 +54,8 @@ download_GBIF_API <- function(download_key,destfile_name,n_try,Sys.sleep_duratio
 #' @export
 #'
 #' @examples
-download_lakefish_dataset <- function(latin_names, n_try = 10, file_marker = NA, key_dataset = NA, key_tax = NA){
+download_lakefish_dataset <- function(latin_names, n_try = 10, file_marker = NA, 
+                                      key_dataset = NA, key_tax = NA){
   #-------------------------------------------------------------------------------
   # Register credentials 
   #-------------------------------------------------------------------------------
@@ -70,23 +71,17 @@ download_lakefish_dataset <- function(latin_names, n_try = 10, file_marker = NA,
   #-------------------------------------------------------------------------------
   message("Setting search parameters and getting download key...")
   
+  keys = rep(NA, length(latin_names))
   # Find a taxonkey - get list of gbif keys to filter download
   if (is.na(key_tax)){
     for(i in 1:length(latin_names)){
       key <- name_suggest(q = toString(latin_names[i]), rank = 'species')$key[1] 
-      if (i == 1){
-        keys <- key
-      } 
-      else {
-        keys <- paste0(keys, ",", key)
-      }
+      keys[i] = key
     }
   }
   else {
-    keys <- key_num
+    keys <- key_tax
   }
-  
-  
   
   #-------------------------------------------------------------------------
   # Send download request
@@ -96,12 +91,10 @@ download_lakefish_dataset <- function(latin_names, n_try = 10, file_marker = NA,
   # Spawn download request - careful, there is a max limit on simultanious downloads 
   # per user allowed by the GBIF API. 
   download_key <- occ_download(
-    paste('datasetKey = ', key_dataset), 
-    paste('taxonKey = ', keys),
-    'hasCoordinate = TRUE',
-    #geom_param,
-    type = "and"
-  ) %>% 
+    pred('datasetKey', key_dataset), 
+    pred_in('taxonKey', keys),
+    pred("hasCoordinate", TRUE),
+    type = "and") %>% 
     occ_download_meta
   
   # For overview of your downloads, see https://www.gbif.org/user/download . 

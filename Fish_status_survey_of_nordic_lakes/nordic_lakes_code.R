@@ -7,7 +7,7 @@ library(maps)
 library(dplyr)
 
 
-readRDS("Fish_status_survey_of_nordic_lakes/data/merged.rds")
+data <- readRDS("Fish_status_survey_of_nordic_lakes/data/merged.rds")
 
 # Looking at data
 year_counts <- count(data, year) %>% filter(year>=1800)
@@ -79,6 +79,7 @@ ggplot(trout) +
 ##-----------------------------------------------------------------------------------
 # Modelling
 ##-----------------------------------------------------------------------------------
+
 
 model1 <- glm(occurrenceStatus ~ decimalLatitude + decimalLongitude, 
               family = 'binomial', data = dataNO)

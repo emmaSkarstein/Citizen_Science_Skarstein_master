@@ -19,7 +19,7 @@ knitr::opts_chunk$set(fig.width=12,
 
 We will be using the following packages:
 ```{r}
-library(ggplot2) # For beatiful plots
+library(ggplot2) # For beautiful plots
 library(maps) # For map of fennoscandia countries
 library(dplyr) # For data wrangling
 library(ggmap) # For getting a higher resolution map of Trondheim
@@ -225,7 +225,7 @@ nrow(filter(artsobsNO, occurrenceStatus == "absent"))
 
 Next, let's look at the observation points for each of the datasets. 
 
-```{r, fig.height = 10}
+```{r, fig.height = 12}
 plot_obs <- function(dataset){
   nosefi <- map_data("world", region = c("Norway(?!:Svalbard)", 
                                          "Sweden", "Finland")) 
@@ -258,7 +258,7 @@ transcribed_gillnet_plot <- plot_obs(transcribed_gillnet)
 artsobsNO_plot <- plot_obs(artsobsNO)
 artobsSE_plot <- plot_obs(artobsSE)
 
-plot_grid(NORS_plot, PIKE_plot, trondheim_plot, transcribed_gillnet_plot, artsobsNO_plot, artobsSE_plot)
+plot_grid(NORS_plot, PIKE_plot, trondheim_plot, nordic_survey_plot, transcribed_gillnet_plot, artsobsNO_plot, artobsSE_plot)
 ```
 
 Now, note that we discovered that 36% of the observations from the Swedish species observation service are without `year`-variable. Let us look at where we find these observations compared to the observations with `year`-variable:
@@ -277,6 +277,24 @@ varmland <- artobsSE.NA %>% filter(rightsHolder == as.character(rightsHolder_cou
 plot_obs(varmland)
 
 ```
+
+
+## Miscellanea
+
+A quick look at who made the Norwegian citizen science observations:
+
+```{r}
+recordedBy_count <- count(artsobsNO, recordedBy, sort = TRUE)
+institutionCode_count <- count(artsobsNO, institutionCode, sort = TRUE)
+collectionCode_count <- count(artsobsNO, collectionCode, sort = TRUE)
+datasetName_count <- count(artsobsNO, datasetName, sort = TRUE)
+
+head(recordedBy_count)
+institutionCode_count
+collectionCode_count
+datasetName_count
+```
+
 
 
 

@@ -4,7 +4,15 @@
 library(ggplot2)
 
 
-occ <- readRDS('data/GBIF_download_Norge.rds')
+artsobsNO <- readRDS('Nordic_Species_Observation_Services/data/GBIF_download_Norge.rds')
+
+# First we can remove the columns that don't have any information
+not_all_na <- function(x) any(!is.na(x))
+artsobsNO <- artsobsNO %>% select_if(not_all_na)
+
+##-------------------------------------------------------------------------------
+# Preliminary plots
+##-------------------------------------------------------------------------------
 
 # Bar plot of different species
 species_counts <- count(occ, vars = species, sort = TRUE)
@@ -57,5 +65,20 @@ ggplot(trutta) +
   stat_binhex(aes(x = decimalLongitude, y = decimalLatitude)) +
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank())
+
+
+#--------------------------------------------------------------------------
+# Who made these observations?
+#--------------------------------------------------------------------------
+
+recordedBy_count <- count(artsobsNO, recordedBy, sort = TRUE)
+institutionCode_count <- count(artsobsNO, institutionCode, sort = TRUE)
+collectionCode_count <- count(artsobsNO, collectionCode, sort = TRUE)
+datasetName_count <- count(artsobsNO, datasetName, sort = TRUE)
+
+head(recordedBy_count)
+institutionCode_count
+collectionCode_count
+datasetName_count
 
 

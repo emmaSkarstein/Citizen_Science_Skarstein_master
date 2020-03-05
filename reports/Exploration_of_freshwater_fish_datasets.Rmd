@@ -1,0 +1,329 @@
+---
+title: "Exploration of freshwater fish datasets"
+author: "Emma Sofie Skarstein"
+date: "February 2020"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    theme: united
+---
+
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12,
+                      warning=FALSE, message=FALSE)
+```
+
+# Data preparation
+
+We will be using the following packages:
+```{r}
+library(ggplot2) # For beautiful plots
+library(maps) # For map of fennoscandia countries
+library(dplyr) # For data wrangling
+library(ggmap) # For getting a higher resolution map of Trondheim
+library(cowplot) # For making a grid of ggplots
+
+```
+
+## Downloading
+
+For downloading all data sets used here, follow these links:
+
+- **NORS:** https://ntnu.box.com/shared/static/bn44f3aulesciijjb9dq4o72add25vyt.zip 
+
+- **PIKE:** https://gbif.vm.ntnu.no/ipt/resource?r=pike
+
+- **Kautokeino:** https://gbif.vm.ntnu.no/ipt/resource?r=kautokeino_fish_inventory (we don't really have this data right now)
+
+- **Trondheim:** https://gbif.vm.ntnu.no/ipt/resource?r=freshwater_survey_occurrences_trondheim_municipality
+
+- **Nordic presence absence:** https://gbif.vm.ntnu.no/ipt/resource?r=fish_status_survey_of_nordic_lakes
+
+- **Transcriptions of Norwegian gillnet test-fishing:** https://gbif.vm.ntnu.no/ipt/resource?r=transcribed_gillnet_test_fishing_data_norway
+
+- **Citizen science observations:** (Norwegian and Swedish species observation services) To download from GBIF, use dataset key *b124e1e0-4755-430f-9eab-894f25a9b59c* for Norway, or *38b4c89f-584c-41bb-bd8f-cd1def33e92f* for Sweden. Note that this gives all species, not only fish, so filters for specific species of interest should also be provided. See code `downloading_CS_observations.R`.
+
+- **Lake polygons Fennoscandia:** https://bird.unit.no/resources/9b27e8f0-55dd-442c-be73-26781dad94c8/content (click on "Innhold"-tab at the bottom of the page to download only selected sets of lakes)
+
+
+
+## Merging events and occurrences
+For some of the data sets, we need to merge occurrence- and event-files. This is done easily by merging by `eventID` once both files are loaded into *R*:
+```{r, eval = FALSE}
+merged_data <- merge(occurrence, event, by = "eventID")
+```
+
+See details in the file `merging_occ_and_event.R`. I store the merged datasets in `data`-folders withing each dataset's individual folder, this is what my folder structure looks like:
+
+- Fish_status_survey_of_nordic_lakes
+  - data
+- Nordic_Species_Observation_Services
+  - data
+- NORS
+  - data
+- PIKE
+  - data
+- R
+  - download_lakefish_dataset.R
+  - match_to_lake.R
+  - merging_occ_and_event.R
+- Transcribed_gillnet_test_fishing_data_norway
+  - data
+- Trondheim_freshwater_survey
+  - data
+- reports
+  - Exploration_of_freshwater_fish_datasets.rmd (this report!!)
+
+```{r}
+NORS <- readRDS("../NORS/data/merged.rds")
+PIKE <- readRDS("../PIKE/data/merged.rds")
+#kautokeino_data <- 
+trondheim_data <- read.table("../Trondheim_freshwater_survey/data/occurrence.txt", sep = "\t", header = TRUE)
+nordic_survey <- readRDS("../Fish_status_survey_of_nordic_lakes/data/merged.rds")
+transcribed_gillnet <-  readRDS("../Transcribed_gillnet_test_fishing_data_norway/data/merged.rds")
+artsobsNO <- readRDS("../Nordic_Species_Observation_Services/data/GBIF_download_Norge.rds")
+artobsSE <- readRDS("../Nordic_Species_Observation_Services/data/GBIF_download_Sverige.rds")
+```
+
+Finally! Now we can go on to look at these datasets.
+
+# Exploring the data
+## Distribution across years
+First, let us look at when observations are made in the different datasets.
+```{r, echo = FALSE}
+PIKE$year <- as.numeric(substr(as.character(PIKE$eventDate), 1, 4))
+pikeyear <- PIKE %>% filter(is.na(year))
+```
+```{r, echo = FALSE, fig.height = 10}
+# Function that takes in observation dataset, and returns a dataframe with
+# observation counts for that data set for every year from 1700 to 2020 
+make_count_df <- function(dataset){
+  count_df <- dplyr::count(dataset, year)
+  full_df <- count_df %>% 
+    tidyr::complete(year = 1700:2020, fill = list(n = 0)) %>% 
+    as.data.frame()
+  colnames(full_df)[2] <- deparse(substitute(dataset))
+  return(full_df)
+}
+
+# Create big dataframe that contains year counts for all the different
+# datasets
+full_df <- Reduce(merge, list(make_count_df(NORS),
+                              make_count_df(PIKE),
+                              #make_count_df(kautokeino_data),
+                              make_count_df(trondheim_data),
+                              make_count_df(nordic_survey),
+                              make_count_df(transcribed_gillnet),
+                              make_count_df(artsobsNO),
+                              make_count_df(artobsSE)))
+
+# Convert to long format, so that the dataset becomes a factor variable.
+full_long <- tidyr::pivot_longer(full_df, -year)
+
+# Plot faceted bar plots of observations per year
+ggplot(full_long %>% filter(year>=1900), aes(x = year, y = value)) + 
+  geom_bar(stat = "identity", aes(fill = name)) + 
+  theme_light() + 
+  facet_wrap(vars(name), scales = 'free') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+
+```
+
+Note that since the number of observations varies so wildly between the years and the datasets, the y-axis is different in each of the mini-plots above. I have also excluded observations before year 1900 in the above plot, since there are so few they wouldn't be visible. But some of the datasets do have observations from before that, as is clear in the table below.
+
+```{r, echo = FALSE}
+# Function for making a dataset summary
+year_statistics <- function(dataset){
+  name <- deparse(substitute(dataset))
+  minimum_year <- min(dataset$year, na.rm = TRUE)
+  maximum_year <- max(dataset$year, na.rm = TRUE)
+  year_list <- count(dataset, year, sort = TRUE)
+  colnames(year_list) <- NULL
+  return(data.frame(dataset = name, 
+                    earliest_year = minimum_year, 
+                    latest_year = maximum_year,
+                    most_common_year = year_list[1,1]))
+}
+
+all_year_stats <- rbind(year_statistics(NORS),
+                        year_statistics(PIKE),
+                        #year_statistics(kautokeino_data),
+                        year_statistics(trondheim_data),
+                        year_statistics(nordic_survey), 
+                        year_statistics(transcribed_gillnet), 
+                        year_statistics(artsobsNO), 
+                        year_statistics(artobsSE))
+```
+```{r, echo = FALSE, results = 'asis'}
+library(knitr)
+kable(all_year_stats)
+```
+
+For some reason the observations from the Swedish observation service has really a lot of NA entries for the `year`-variable, the fraction of entries with year = NA is:
+```{r}
+nrow(filter(artobsSE, is.na(year))) / nrow(artobsSE)
+```
+That is slightly odd, I will look into this further in the map-section.
+
+
+## Observation types
+The datasets may differ in the type of data available. Some are presence/absence, some give only presences, while others count number of individuals observed.
+
+To get a quick overview, the function `check_obs_type()` shows the levels of the variable `occurrenceStatus` and the number off *different* levels of the variable `organismQuantity`:
+
+```{r}
+check_obs_type <- function(dataset){
+  cat("Dataset:", deparse(substitute(dataset)), "\n")
+  cat("occurrenceStatus has levels: ", 
+             unique(dataset$occurrenceStatus))
+  cat("\nNumber of different organism quantities reported:",
+      length(unique(dataset$organismQuantity)))
+}
+```
+```{r, echo = FALSE}
+check_obs_type(NORS)
+check_obs_type(PIKE)
+#check_obs_type(kautokeino_data)
+check_obs_type(trondheim_data)
+check_obs_type(nordic_survey)
+check_obs_type(transcribed_gillnet)
+check_obs_type(artsobsNO)
+```
+For some reason some of the datasets seem to have levels "1" and "2", while others have "present" and "absent", while in reality they all have only "present"/"absent" (or only "present"). Let's check the classes of the variables for the different datasets:
+
+```{r}
+class(nordic_survey$occurrenceStatus)
+class(artsobsNO$occurrenceStatus)
+```
+So the reason is just that most of the datasets have the `occurrenceStatus` as a factor variable, while `artsobsNO` has it as a character.
+
+We also see that some of the datasets are clearly reporting abundance, while others are not, but some, like the Nordic survey, has mostly just reported presences, but seems to have an organismQuantity on a very few of the observations. Let's take a closer look at that:
+
+```{r}
+unique(nordic_survey$organismQuantity)
+```
+
+Another strange thing is the fact that there seems to be presence/absence observations in the citizen science data from the species observation services, where we would have expected presence only data. However, there is actually just one observation with "absent".
+```{r}
+nrow(filter(artsobsNO, occurrenceStatus == "absent"))
+```
+
+Now, two of the datasets, the Trondheim-data and the Transcribed gillnet data, report only presences, but we wonder if maybe some of the organism quantities are zero.
+
+
+```{r}
+min(transcribed_gillnet$organismQuantity, na.rm = TRUE)
+min(trondheim_data$organismQuantity, na.rm = TRUE)
+```
+Aha! So in the transcribed gillnet data there are "presences" with quantity 0. Let us take a quick look at these:
+```{r}
+gillnet_abs <- transcribed_gillnet %>% filter(organismQuantity == 0)
+nrow(gillent_abs)
+```
+That is a little disappointing, there are only two absences.
+
+
+
+| Dataset               | Type of observations |
+| :-------------------- | -------------------- |
+| NORS                  | Presence only. |
+| PIKE                  | Presence/absence/rare/doubtful/irregular, with observed quantity as number. |
+| Kautokeino            | Presence/absence |
+| Trondheim             | Presence only, with observed quantity as number. |
+| Nordic survey         | Presence/absence, with observed quantity as one of "unknown", "sparse", "ordinary" or "abundant" |
+| Transcribed gillnet   | Presence only, with observed quantity as number. |
+| Species observation services | Presence only. (note: there may be a few absences in the datasets) |
+
+
+## Observation locations
+
+Next, let's look at the observation points for each of the datasets. 
+
+```{r, fig.height = 12}
+plot_obs <- function(dataset){
+  nosefi <- map_data("world", region = c("Norway(?!:Svalbard)", 
+                                         "Sweden", "Finland")) 
+  p <- ggplot(dataset) +
+    geom_polygon(data = nosefi, aes(long, lat, group = group), 
+               color="#2b2b2b", fill = "white") +
+    geom_point(aes(x = decimalLongitude, y = decimalLatitude), 
+             color = 'hotpink4', alpha = 0.6, size = 0.5) +
+    theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    guides(colour = guide_legend(override.aes = list(size=2))) +
+    ggtitle(deparse(substitute(dataset)))
+  return(p)
+}
+
+NORS_plot <- plot_obs(NORS)
+PIKE_plot <- plot_obs(PIKE)
+#kautokeino_data <- plot_obs(kautokeino_data)
+
+trond_loc = c(10.1, 63.34, 10.5, 63.46)
+trond_map <- get_map(location=trond_loc,
+                 source="stamen", maptype="watercolor", crop=FALSE)
+trondheim_plot <- ggmap(trond_map) +
+  geom_point(data = trondheim_data, aes(x = decimalLongitude, 
+                                        y = decimalLatitude), 
+             alpha = 0.6, size = 1, color = 'hotpink4') + 
+  ggtitle("trondheim_data")
+
+nordic_survey_plot <- plot_obs(nordic_survey)
+transcribed_gillnet_plot <- plot_obs(transcribed_gillnet)
+artsobsNO_plot <- plot_obs(artsobsNO)
+artobsSE_plot <- plot_obs(artobsSE)
+
+plot_grid(NORS_plot, PIKE_plot, trondheim_plot, nordic_survey_plot, transcribed_gillnet_plot, artsobsNO_plot, artobsSE_plot)
+```
+
+Now, note that we discovered that 36% of the observations from the Swedish species observation service are without `year`-variable. Let us look at where we find these observations compared to the observations with `year`-variable:
+```{r, echo = FALSE}
+plot_grid(plot_obs(artobsSE %>% filter(is.na(year))), 
+          plot_obs(artobsSE %>% filter(!is.na(year))))
+
+```
+So there is a blob right by the Norwegian border that doesn't have year information. Let's explore this a little more:
+```{r}
+not_all_na <- function(x) any(!is.na(x))
+artobsSE.NA <- artobsSE %>% filter(is.na(year)) %>% select_if(not_all_na)
+
+rightsHolder_counts <- count(artobsSE.NA, rightsHolder, sort = TRUE)
+varmland <- artobsSE.NA %>% filter(rightsHolder == as.character(rightsHolder_counts[1,1]))
+plot_obs(varmland)
+
+```
+
+
+## Miscellanea
+
+A quick look at who made the Norwegian citizen science observations:
+
+```{r}
+recordedBy_count <- count(artsobsNO, recordedBy, sort = TRUE)
+institutionCode_count <- count(artsobsNO, institutionCode, sort = TRUE)
+collectionCode_count <- count(artsobsNO, collectionCode, sort = TRUE)
+datasetName_count <- count(artsobsNO, datasetName, sort = TRUE)
+
+head(recordedBy_count)
+institutionCode_count
+collectionCode_count
+datasetName_count
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -48,6 +48,7 @@ ggplot(dataNO) +
 # Match each observation to closest lake
 ##-----------------------------------------------------------------------------------
 source("R/match_to_lake.R")
+lakes <- readRDS("data/Norwegian_lakes.rds")
 occ_list <- match_to_lake(dataNO, lakes)
 
 occ_matched <- occ_list[[1]]

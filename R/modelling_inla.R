@@ -64,3 +64,10 @@ class(trout_env$occurrenceStatus)
 inla_mod2 <- inla(occurrenceStatus ~ area_km2 + perimeter_m + HFP + distance_to_road,
                   family = "binomial", data = trout_env, verbose = TRUE)
 summary(inla_mod2)
+
+
+# Basic INLA model with spatial and environmental covariates
+inla_mod3 <- inla(occurrenceStatus ~ decimalLongitude.x + decimalLatitude.x + 
+                    eurolst_bio10 + area_km2,
+                  family = "binomial", data = trout_env, verbose = TRUE)
+summary(inla_mod3)

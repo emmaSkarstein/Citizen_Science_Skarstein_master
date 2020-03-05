@@ -1,4 +1,5 @@
 library(sf)
+library(dplyr)
 
 #' Match to lake
 #' 
@@ -19,10 +20,10 @@ match_to_lake <- function(data, lake_polygons, max_dist_from_lake = 10){
   message("Transforming data and selecting variables...")
   data_sf <- data %>% 
     # Convert to sf object for easier handling. crs = Coordinate Reference System
-    st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) %>%
+    sf::st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) %>%
     
     # Transform coordinate system, using same system as in "lakes"
-    st_transform(st_crs(lake_polygons)$epsg)
+    sf::st_transform(st_crs(lake_polygons)$epsg)
     
     # Select a few of the variables
     # dplyr::select(gbifID, occurrenceID, catalogNumber, geometry, species, 
@@ -36,27 +37,27 @@ match_to_lake <- function(data, lake_polygons, max_dist_from_lake = 10){
   # Find closest lake
   #-------------------------------------------------------------------------------------------------
   message("Joining occurrence data to lake polygons by closest lake...")
-  occ_with_lakes <- st_join(data_sf, lakes, join = st_nearest_feature)
+  occ_with_lakes <- sf::st_join(data_sf, lakes, join = st_nearest_feature)
 
   #-------------------------------------------------------------------------------------------------
   # Find distance to closest lake
   #-------------------------------------------------------------------------------------------------
   message("Calculating distance to closest lake...")
-  index <- st_nearest_feature(x = data_sf, y = lakes) # index of closest lake
+  index <- sf::st_nearest_feature(x = data_sf, y = lakes) # index of closest lake
   closest_lakes <- lakes %>% slice(index) # slice based on the index
-  dist_to_lake <- st_distance(x = data_sf, y = closest_lakes, by_element = TRUE) # get distance
+  dist_to_lake <- sf::st_distance(x = data_sf, y = closest_lakes, by_element = TRUE) # get distance
   occ_with_lakes$dist_to_lake <- as.numeric(dist_to_lake) # add the distance calculations to match data
 
   #-------------------------------------------------------------------------------------------------
   # Filter out occurrence records not matching lakes (given certain criteria)
   #-------------------------------------------------------------------------------------------------
-  occ_matched <- occ_with_lakes %>% filter(dist_to_lake < max_dist_from_lake) # 
+  occ_matched <- occ_with_lakes %>% dplyr::filter(dist_to_lake < max_dist_from_lake) # 
   
   
   #-------------------------------------------------------------------------------------------------
   # Looking closer at occurrence records not matching a lake
   #-------------------------------------------------------------------------------------------------
-  occ_far_from_lake <- occ_with_lakes %>% filter(dist_to_lake > max_dist_from_lake)
+  occ_far_from_lake <- occ_with_lakes %>% dplyr::filter(dist_to_lake > max_dist_from_lake)
   
   # Observations outside limit:
   message("Number of observations further than ", max_dist_from_lake ,"m from a lake: ", nrow(occ_far_from_lake))

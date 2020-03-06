@@ -21,23 +21,15 @@ match_to_lake <- function(data, lake_polygons, max_dist_from_lake = 10){
   data_sf <- data %>% 
     # Convert to sf object for easier handling. crs = Coordinate Reference System
     sf::st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) %>%
-    
     # Transform coordinate system, using same system as in "lakes"
     sf::st_transform(st_crs(lake_polygons)$epsg)
-    
-    # Select a few of the variables
-    # dplyr::select(gbifID, occurrenceID, catalogNumber, geometry, species, 
-    #               taxonKey, datasetKey, locality, municipality, county, 
-    #               countryCode, locationID, eventDate, year, month, day, 
-    #               samplingProtocol, eventID, fieldNumber, recordedBy, 
-    #               dynamicProperties, collectionCode, datasetName, license, 
-    #               institutionCode)
+
   
   #-------------------------------------------------------------------------------------------------
   # Find closest lake
   #-------------------------------------------------------------------------------------------------
   message("Joining occurrence data to lake polygons by closest lake...")
-  occ_with_lakes <- sf::st_join(data_sf, lakes, join = st_nearest_feature)
+  occ_with_lakes <- sf::st_join(data_sf, lake_polygons, join = st_nearest_feature)
 
   #-------------------------------------------------------------------------------------------------
   # Find distance to closest lake

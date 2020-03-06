@@ -5,11 +5,12 @@
 library(ggplot2)
 library(maps)
 library(dplyr)
-
+library(sf)
+library(mapview)
 
 data <- readRDS("Fish_status_survey_of_nordic_lakes/data/merged.rds")
 
-# Looking at data
+#### LOOKING AT DATA ####
 year_counts <- count(data, year) %>% filter(year>=1800)
 
 ggplot(year_counts, aes(x = year, y = n)) + 
@@ -29,9 +30,7 @@ dataFI <- data96 %>% filter(countryCode == "FI")
 test <- data96 %>% filter(grepl('trutta', scientificName))
 length(unique(data96$waterBody))
 
-##-----------------------------------------------------------------------------------
-## Plot observations
-##-----------------------------------------------------------------------------------
+#### PLOT OBSERVATIONS #### 
 # Load Norway-map
 norway <- map_data("world", region = "Norway(?!:Svalbard)") 
 
@@ -44,27 +43,50 @@ ggplot(dataNO) +
   guides(colour = guide_legend(override.aes = list(size=2))) 
 
 
-##-----------------------------------------------------------------------------------
-# Match each observation to closest lake
-##-----------------------------------------------------------------------------------
-source("R/match_to_lake.R")
+#### FINDING UNIQUE LOCATIONS ####
+length(unique(dataNO$decimalLatitude))
+length(unique(dataNO$decimalLongitude))
+locations <- unique(dataNO[,c("decimalLatitude", "decimalLongitude")])
+
+plot(locations)
+
+ggplot(locations) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color="#2b2b2b", fill = "white") + 
+  geom_point(aes(x = decimalLongitude, y = decimalLatitude), 
+             alpha = 0.6, size = 0.5) +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+  guides(colour = guide_legend(override.aes = list(size=2))) 
+# Now we need to match each of these 744 to a lake in our lake object
 lakes <- readRDS("data/Norwegian_lakes.rds")
-occ_list <- match_to_lake(dataNO, lakes)
 
-occ_matched <- occ_list[[1]]
-occ_w_lakes <- occ_list[[2]]
-saveRDS(occ_matched, "Fish_status_survey_of_nordic_lakes/data/occ_matched.rds")
-saveRDS(occ_w_lakes, "Fish_status_survey_of_nordic_lakes/data/occ_w_lakes.rds")
+#### MATCHING TO LAKE ####
+data_sf <- locations %>% 
+  # Convert to sf object for easier handling. crs = Coordinate Reference System
+  sf::st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) %>%
+  # Transform coordinate system, using same system as in "lakes"
+  sf::st_transform(st_crs(lakes)$epsg)
+
+# Find closest lake
+occ_with_lakes <- sf::st_join(data_sf, lakes, join = st_nearest_feature)
+
+# Find distance to closest lake
+index <- sf::st_nearest_feature(x = data_sf, y = lakes) # index of closest lake
+closest_lakes <- lakes %>% slice(index) # slice based on the index
+dist_to_lake <- sf::st_distance(x = data_sf, y = closest_lakes, by_element = TRUE) # get distance
+occ_with_lakes$dist_to_lake <- as.numeric(dist_to_lake) # add the distance calculations to match data
+
+distance_counts <- count(occ_with_lakes, dist_to_lake)
+
+far_obs <- occ_with_lakes %>% filter(dist_to_lake > 0)
+far_lakes <- closest_lakes %>% filter(waterBodyID %in% far_obs$waterBodyID)
+
+# Super useful map! :
+mapview(far_obs, zcol = "dist_to_lake", cex = "dist_to_lake") + 
+  mapview(far_lakes, alpha = 0)
 
 
-occ_matched <- readRDS("Fish_status_survey_of_nordic_lakes/data/occ_matched.rds")
-str(occ_matched)
-occ_matched$waterBodyID <- as.factor(occ_matched$waterBodyID)
-
-# How many lakes?
-length(unique(occ_matched$waterBodyID))
-
-##------------------------------------------------------------------------
+#### TROUT ####
 trout <- occ_matched %>% filter(grepl('trutta', scientificName))
 
 # Point map
@@ -77,10 +99,7 @@ ggplot(trout) +
   guides(colour = guide_legend(override.aes = list(size=2))) 
 
 
-##-----------------------------------------------------------------------------------
-# Modelling
-##-----------------------------------------------------------------------------------
-
+#### MODELLING ####
 
 model1 <- glm(occurrenceStatus ~ decimalLatitude + decimalLongitude, 
               family = 'binomial', data = dataNO)
@@ -91,7 +110,7 @@ summary(model2)
 
 
 
-# Model fitting in INLA
+#### MODEL FITTING IN INLA ####
 library(INLA)
 formula = Response ~ Temperature(model="iid")
 mod.sst = inla(formula,data=inlasst,family="binomial",Ntrials=n)

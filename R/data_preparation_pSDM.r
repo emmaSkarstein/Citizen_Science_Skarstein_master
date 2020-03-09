@@ -17,8 +17,8 @@ lakes <- readRDS("data/Norwegian_lakes.rds")
 #-------------------------------------------------------------------------
 # Step 2: Match to closest lake
 #-------------------------------------------------------------------------
-occ_list <- match_to_lake(occ_lakefish, lakes)
-occ_matched <- occ_list[[1]]
+#occ_list <- match_to_lake(occ_lakefish, lakes)
+#occ_matched <- occ_list[[1]]
 #occ_w_lakes <- occ_list[[2]]
 #saveRDS(occ_matched, here::here("data", paste0("GBIF_download_", name, "_matched.rds")))
 #saveRDS(occ_w_lakes, here::here("data", paste0("GBIF_download_", name, "_wlakes.rds")))
@@ -26,7 +26,7 @@ occ_matched <- occ_list[[1]]
 #-------------------------------------------------------------------------
 # Step 3: Remove all observations with no time variable
 #-------------------------------------------------------------------------
-occ_matched <- readRDS("Fish_status_survey_of_nordic_lakes/data/occ_matched.rds")
+occ_matchedd <- readRDS("Fish_status_survey_of_nordic_lakes/data/occ_matched.rds")
 
 occ_matched <- occ_matched[complete.cases(occ_matched$year,occ_matched$month,occ_matched$day),]
 st_geometry(occ_matched) <- NULL

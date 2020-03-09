@@ -7,7 +7,7 @@ library(dplyr)
 #'
 #' @param data The fish observations. 
 #' @param lake_polygons The polygons of the lakes themselves.
-#' @param max_dist_from_lake Maximum tolerated distance from a lake before (what? what do we do with obs far from lakes?)
+#' @param max_dist_from_lake Maximum tolerated distance from a lake before observation is removed.
 #'
 #' @return A new data set containing only observations that are closer than max_dist_from_lake to a lake.
 #' @export
@@ -35,8 +35,8 @@ match_to_lake <- function(data, lake_polygons, max_dist_from_lake = 10){
   # Find distance to closest lake
   #-------------------------------------------------------------------------------------------------
   message("Calculating distance to closest lake...")
-  index <- sf::st_nearest_feature(x = data_sf, y = lakes) # index of closest lake
-  closest_lakes <- lakes %>% slice(index) # slice based on the index
+  index <- sf::st_nearest_feature(x = data_sf, y = lake_polygons) # index of closest lake
+  closest_lakes <- lake_polygons %>% slice(index) # slice based on the index
   dist_to_lake <- sf::st_distance(x = data_sf, y = closest_lakes, by_element = TRUE) # get distance
   occ_with_lakes$dist_to_lake <- as.numeric(dist_to_lake) # add the distance calculations to match data
 

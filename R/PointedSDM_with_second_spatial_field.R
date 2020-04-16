@@ -83,7 +83,15 @@ Mesh <- MakeSpatialRegion(data=NULL, bdry=norway.poly, meshpars=Meshpars,
 stk.ip <- MakeIntegrationStack(mesh=Mesh$mesh, data=Covariates, 
                                area=Mesh$w, tag='ip', InclCoords=TRUE)
 
-  
+
+# SURVEY, STRUCTURED STACK ---------------------------------------------------------------------------------------------
+stk.survey <- MakeBinomStack(observs = Data_survey, data = Covariates, 
+                             mesh=Mesh$mesh, presname="occurrenceStatus",  
+                             tag="survey", InclCoords=TRUE)
+# Note that when using 'MakeBinomStack' here, the spatial effect in stk.survey is just called "i", 
+#  while in the unstructured data stack we called the corresponding effect 'unstr_field'. 
+
+
 # ARTSOBS, UNSTRUCTURED STACK -------------------------------------------------------------------------------------------
 # Finding the covariates that are closest to the observation points
 NearestCovs_unstr <- GetNearestCovariate(points = Data_artsobs, covs = Covariates)
@@ -99,13 +107,6 @@ stk.artsobs <- inla.stack(data = list(resp = cbind(rep(1,nrow(NearestCovs_unstr)
                                     effects = list(NearestCovs_unstr@data, 
                                                  list(unstr_field = 1:Mesh$mesh$n, 
                                                       bias_field = 1:Mesh$mesh$n))) # This is for the second spatial field!
-
-# SURVEY, STRUCTURED STACK ---------------------------------------------------------------------------------------------
-stk.survey <- MakeBinomStack(observs = Data_survey, data = Covariates, 
-                             mesh=Mesh$mesh, presname="occurrenceStatus",  
-                             tag="survey", InclCoords=TRUE)
-# Note that when using 'MakeBinomStack' here, the spatial effect in stk.survey is just called "i", 
-#  while in the unstructured data stack we called the corresponding effect 'unstr_field'. 
 
 
 # PREDICTIONS ----------------------------------------------------------------------------------------------------------

@@ -13,6 +13,8 @@ artsobsNO <- artsobsNO %>% select_if(not_all_na)
 ##-------------------------------------------------------------------------------
 # Preliminary plots
 ##-------------------------------------------------------------------------------
+occ <- Data_artsobs_df
+plot(Data_artsobs)
 
 # Bar plot of different species
 species_counts <- count(occ, vars = species, sort = TRUE)
@@ -33,6 +35,16 @@ ggplot(time_counts_recent, aes(x = year, y = n)) +
   geom_bar(stat = "identity", color="black", position = position_stack(reverse = FALSE)) + 
   theme_light() + 
   ylab("Number of observations")
+
+fylke_counts <- count(occ, county.x)
+
+ggplot(fylke_counts, aes(x = county.x, y = n)) + 
+  geom_bar(stat = "identity", color="black", position = position_stack(reverse = FALSE)) + 
+  theme_light() + 
+  ylab("Number of observations")+
+  theme(text = element_text(size = 15), 
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank())
 
 ##-------------------------------------------------------------------------------
 # Looking only at Salmo trutta
@@ -71,14 +83,22 @@ ggplot(trutta) +
 # Who made these observations?
 #--------------------------------------------------------------------------
 
-recordedBy_count <- count(artsobsNO, recordedBy, sort = TRUE)
-institutionCode_count <- count(artsobsNO, institutionCode, sort = TRUE)
-collectionCode_count <- count(artsobsNO, collectionCode, sort = TRUE)
-datasetName_count <- count(artsobsNO, datasetName, sort = TRUE)
+recordedBy_count <- count(occ, recordedBy, sort = TRUE)
+institutionCode_count <- count(occ, institutionCode, sort = TRUE)
+collectionCode_count <- count(occ, collectionCode, sort = TRUE)
+datasetName_count <- count(occ, datasetName, sort = TRUE)
 
 head(recordedBy_count)
 institutionCode_count
 collectionCode_count
 datasetName_count
 
+olehakon <- filter(occ, recordedBy == "Ole-HÃ¥kon Heier")
 
+ggplot(olehakon) +
+  geom_map(data = norway, map = norway, aes(long, lat, map_id=region), 
+           color="#2b2b2b", fill = "white") + 
+  geom_point(aes(x = decimalLongitude, y = decimalLatitude), 
+             alpha = 0.6, size = 1, color = 'darkslategray4') + 
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank())

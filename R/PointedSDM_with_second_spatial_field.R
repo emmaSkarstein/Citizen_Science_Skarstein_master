@@ -26,6 +26,7 @@ library(reshape2)
 library(rgeos)
 library(fields)
 library(viridis)
+library(ggpubr)
 
 # MAP ---------------------------------------------------------------------------------------------------------
 # (nothing new here)
@@ -132,7 +133,8 @@ NorwegianModel <- FitModel(stk.survey, stk.artsobs,
                            stk.ip, stk.pred$stk,
                            formula = formulaJ,
                            mesh = Mesh$mesh,
-                           predictions = TRUE, 
+                           predictions = TRUE,
+                           dic = TRUE,
                            spat.ind = NULL) # About this: I've included the spatial fields in the formula, so this should be fine, 
                                             # but it may be possible to remove this and remove two of the fields in the formula?
 

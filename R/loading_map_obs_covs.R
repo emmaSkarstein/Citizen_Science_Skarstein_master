@@ -1,0 +1,67 @@
+
+library(ggplot2)
+library(sf) # for sf objects
+library(plyr)
+library(dplyr) # for smoother dataframe-manipulation
+library(here) # for cleaner filepath-handling
+library(ggmap) # also for nice maps
+library(maps)
+library(RColorBrewer)
+library(PointedSDMs)
+library(sp)
+library(spatstat)
+library(maptools)
+library(INLA)
+library(reshape2)
+library(rgeos)
+library(fields)
+library(viridis)
+
+# LOADING DATA AND COVARIATES ---------------------------------------------------------------------------------
+
+# Covariates
+# This section varies based on which covariates are used
+covariateData <- readRDS("data/environmental_covariates.RDS")
+covariateData <- covariateData[complete.cases(covariateData$decimalLatitude,covariateData$decimalLongitude,covariateData$area_km2,covariateData$HFP),]
+covariateData <- covariateData %>% mutate(log_area = log(area_km2)) %>% select(-c(ebint, no_vatn_lnr, eb_waterregionID))
+
+head(covariateData)
+
+Covariates <- SpatialPointsDataFrame(coords = covariateData[,c("decimalLongitude","decimalLatitude")],
+                                     data = covariateData, 
+                                     proj4string = Projection)
+Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates
+
+# Observations
+# The data is always the same, but will possibly be split into different sections for validation
+Data_survey_df <- readRDS("Fish_status_survey_of_nordic_lakes/data/clean.rds")
+Data_survey <- SpatialPointsDataFrame(coords = Data_survey_df[,c("decimalLongitude","decimalLatitude")], 
+                                      data = Data_survey_df[,c("occurrenceStatus","species")],
+                                      proj4string = Projection)
+
+Data_artsobs_df <- readRDS("Nordic_Species_Observation_Services/data/clean.rds")
+Data_artsobs <- SpatialPointsDataFrame(coords = Data_artsobs_df[,c("decimalLongitude","decimalLatitude")], 
+                                       data = Data_artsobs_df[,c("occurrenceStatus","species")],
+                                       proj4string = Projection)
+
+# Now we have the covariates in 'Covariates', as well as two types of data sets in 'Data_survey' and 'Data_artsobs'.
+
+# MAP ---------------------------------------------------------------
+# This is always the same
+norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
+norway <- setdiff(norway, filter(norway, subregion == "Jan Mayen"))
+Projection <- CRS("+proj=longlat +ellps=WGS84")
+norwayfill <- map("world", "norway", fill=TRUE, plot=FALSE, 
+                  ylim=c(58,72), xlim=c(4,32))
+IDs <- sapply(strsplit(norwayfill$names, ":"), function(x) x[1])
+norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs, 
+                                   proj4string = Projection)
+
+# MESH --------------------------------------------------------------
+Meshpars <- list(cutoff=0.08, max.edge=c(1, 3), offset=c(1,1))
+Mesh <- MakeSpatialRegion(data=NULL, bdry=norway.poly, meshpars=Meshpars,
+                          proj = Projection)
+
+
+
+

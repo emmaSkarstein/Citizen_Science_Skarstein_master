@@ -70,7 +70,9 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
                                     Ntrials = data_structured@data[,"Ntrials"]), 
                           A = list(1, projmat.str), 
                           tag = "survey",
-                          effects = list(NearestCovs_str@data, list(str_field = 1:Mesh$mesh$n)))
+                          effects = list(NearestCovs_str@data, 
+                                         list(shared_field = 1:Mesh$mesh$n,
+                                              id.iid = 1:Mesh$mesh$n)))
 
   
   
@@ -87,8 +89,9 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
                             A = list(1, projmat.artsobs), 
                             tag = "artsobs",
                             effects = list(NearestCovs_unstr@data, 
-                                           list(unstr_field = 1:Mesh$mesh$n, 
-                                                bias_field = 1:Mesh$mesh$n))) # This is for the second spatial field!
+                                           list(shared_field = 1:Mesh$mesh$n, 
+                                                bias_field = 1:Mesh$mesh$n, # This is for the second spatial field!
+                                                id.iid = 1:Mesh$mesh$n))) 
   
   # PREDICTIONS -----------------------------------------------------------
   Nxy.scale <- 0.1 # use this to change the resolution of the predictions
@@ -104,17 +107,19 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
 
 # FITTING MODEL --------------------------------------------------------------------
 
-MakeFormula <- function(cov_names, second_sp_field = FALSE){
+MakeFormula <- function(cov_names, second_sp_field = FALSE, overdispersion = FALSE){
   intercepts <- "int.survey + int.artsobs - 1"
   env_effects <- paste(cov_names, collapse = ' + ')
-  spatial_effects <- "f(unstr_field, model = Mesh$spde) + 
-                    f(str_field, copy = 'unstr_field', fixed = TRUE)"
+  random_effects <- "f(shared_field, model = Mesh$spde)"
   
   if(second_sp_field){
-    spatial_effects <- paste(spatial_effects, "+ f(bias_field, model = Mesh$spde)")
+    random_effects <- paste(random_effects, "+ f(bias_field, model = Mesh$spde)")
+  }
+  if(overdispersion){
+    random_effects <- paste(random_effects, "+ f(id.iid, model = 'iid')")
   }
   
-  formula1 <- as.formula(paste(c("resp ~ 0 ", intercepts, env_effects, spatial_effects), collapse = " + "))
+  formula1 <- as.formula(paste(c("resp ~ 0 ", intercepts, env_effects, random_effects), collapse = " + "))
   formula1
 }
 

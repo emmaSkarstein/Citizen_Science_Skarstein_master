@@ -1,4 +1,7 @@
-plot.mean.stddev <- function(pred){
+
+
+
+PlotMeanStddev <- function(pred){
   ncolors <- 200
   greencols.fn <- colorRampPalette(brewer.pal(9, "Greens"))
   greencols <- greencols.fn(ncolors)
@@ -12,54 +15,48 @@ plot.mean.stddev <- function(pred){
 }
 
 
-
-# To plot the bias field:
-random_sp_effects <- data.frame(cbind(NorwegianModel$model$summary.random$bias_field$mean,
-                                      NorwegianModel$model$summary.random$bias_field$sd,
-                                      NorwegianModel$model$summary.random$unstr_field$mean,
-                                      NorwegianModel$model$summary.random$unstr_field$sd,
-                                      Mesh$mesh$loc[,1:2]))
-colnames(random_sp_effects) <- c("bias_field", "bf_sd", "shared_field", "sf_sd", "longitude", "latitude")
-
-# bias_map_sp <- SpatialPointsDataFrame(coords = cbind(bias_map["longitude"], bias_map["latitude"]),
-#                                    data = bias_map["bias_field"], 
-#                                    proj4string = Projection)
-# mapview::mapview(bias_map_sp, zcol = c("bias_field"), legend = TRUE,
-#                              col.regions = greencols)
-
-random_sp_effects_long <- tidyr::gather(random_sp_effects, field_type, value, bias_field:sf_sd, factor_key = TRUE)
-
-ggplot(random_sp_effects_long) +
-  geom_map(data = norway, map = norway, aes(long, lat, map_id=region), 
-           color="#2b2b2b", fill = "white") + 
-  geom_point(aes(x = longitude, y = latitude, color = value), alpha = 0.6) +
-  theme(axis.title.x = element_blank(), 
-        axis.title.y = element_blank()) +
-  scale_color_viridis() +
-  facet_wrap(field_type ~ .)
-
-p <- ggplot(random_sp_effects) +
-  geom_map(data = norway, map = norway, aes(long, lat, map_id=region), 
-           color="#2b2b2b", fill = "white") + 
-  theme(axis.title.x = element_blank(), 
-        axis.title.y = element_blank())
-
-
-p1 <- p + geom_point(aes(x = longitude, y = latitude, color = bias_field), alpha = 0.6) +
-  scale_color_viridis()
-p1.1 <- p + geom_point(aes(x = longitude, y = latitude, color = bf_sd), alpha = 0.6) +
-  scale_color_viridis()
-p2 <- p + geom_point(aes(x = longitude, y = latitude, color = shared_field), alpha = 0.6) +
-  scale_color_viridis()
-p2.1 <- p + geom_point(aes(x = longitude, y = latitude, color = sf_sd), alpha = 0.6) +
-  scale_color_viridis()
-
-figure1 <- ggarrange(p1, p1.1, p2, p2.1, ncol = 2, nrow = 2)
-figure2 <- ggarrange(p1, p2, ncol = 2)
-
-
-p1
-figure1
-
-NorwegianModel$model$dic
+PlotSpatialFields <- function(fitmod, biasfield = TRUE){
+  random_sp_effects <- data.frame(cbind(fitmod$model$summary.random$unstr_field$mean,
+                                        fitmod$model$summary.random$unstr_field$sd,
+                                        Mesh$mesh$loc[,1:2]))
+  
+  if(biasfield){
+    bias_stuff <- data.frame(cbind(fitmod$model$summary.random$bias_field$mean,
+                                  fitmod$model$summary.random$bias_field$sd))
+    random_sp_effects <- cbind(bias_stuff, random_sp_effects)
+  }
+  
+  column_names <- c("shared_field", "sf_sd", "longitude", "latitude")
+  if(biasfield){
+    column_names <- c("bias_field", "bf_sd", column_names)
+  }
+  
+  colnames(random_sp_effects) <- column_names
+  
+  p <- ggplot(random_sp_effects) +
+    geom_map(data = norway, map = norway, aes(long, lat, map_id=region), 
+             color="#2b2b2b", fill = "white") + 
+    theme(axis.title.x = element_blank(), 
+          axis.title.y = element_blank())
+  
+  p1 <- p + geom_point(aes(x = longitude, y = latitude, color = shared_field), alpha = 0.6) +
+    scale_color_viridis()
+  p1.1 <- p + geom_point(aes(x = longitude, y = latitude, color = sf_sd), alpha = 0.6) +
+    scale_color_viridis()
+  
+  if(biasfield){
+    p2 <- p + geom_point(aes(x = longitude, y = latitude, color = bias_field), alpha = 0.6) +
+      scale_color_viridis()
+    p2.1 <- p + geom_point(aes(x = longitude, y = latitude, color = bf_sd), alpha = 0.6) +
+      scale_color_viridis()
+  }
+  
+  if(biasfield){
+    figure <- ggarrange(p1, p1.1, p2, p2.1, ncol = 2, nrow = 2)
+    return(figure)
+  }
+  
+  figure <- ggarrange(p1, p1.1, ncol = 2, nrow = 1)
+  return(figure)
+}
 

@@ -38,6 +38,15 @@ library(viridis)
 
 MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
 
+  norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
+  norway <- setdiff(norway, filter(norway, subregion == "Jan Mayen"))
+  Projection <- CRS("+proj=longlat +ellps=WGS84")
+  norwayfill <- map("world", "norway", fill=TRUE, plot=FALSE, 
+                    ylim=c(58,72), xlim=c(4,32))
+  IDs <- sapply(strsplit(norwayfill$names, ":"), function(x) x[1])
+  norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs, 
+                                     proj4string = Projection)
+  
   # INTEGRATION STACK -------------------------------------------------
   stk.ip <- MakeIntegrationStack(mesh = Mesh$mesh, data = covariates, 
                                  area = Mesh$w, tag ='ip', InclCoords=TRUE)
@@ -61,7 +70,7 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
                                     Ntrials = data_structured@data[,"Ntrials"]), 
                           A = list(1, projmat.str), 
                           tag = "survey",
-                          effects = list(NearestCovs_str@data, list(str_field=1:Mesh$mesh$n)))
+                          effects = list(NearestCovs_str@data, list(str_field = 1:Mesh$mesh$n)))
 
   
   
@@ -99,7 +108,7 @@ MakeFormula <- function(cov_names, second_sp_field = FALSE){
   intercepts <- "int.survey + int.artsobs - 1"
   env_effects <- paste(cov_names, collapse = ' + ')
   spatial_effects <- "f(unstr_field, model = Mesh$spde) + 
-                    f(i, copy = 'unstr_field', fixed = TRUE)"
+                    f(str_field, copy = 'unstr_field', fixed = TRUE)"
   
   if(second_sp_field){
     spatial_effects <- paste(spatial_effects, "+ f(bias_field, model = Mesh$spde)")
@@ -110,24 +119,28 @@ MakeFormula <- function(cov_names, second_sp_field = FALSE){
 }
 
 
-MakeModel <- function(..., formula, Mesh){
-  
-  NorwegianModel <- FitModel(...,
-                             formula = formulaJ,
+MakeModel <- function(stk_list, formula, Mesh){
+  NorwegianModel <- FitModel(stk_list$ip, stk_list$artsobs, 
+                             stk_list$survey, stk_list$pred$stk,
+                             formula = formula,
                              mesh = Mesh$mesh,
                              predictions = TRUE,
                              dic = TRUE,
                              spat.ind = NULL) # About this: I've included the spatial fields in the formula, so this should be fine, 
   # but it may be possible to remove this and remove two of the fields in the formula?
   
+  return(NorwegianModel)
+}
+
+MakePred <- function(stk.pred, model){
   Projection <- CRS("+proj=longlat +ellps=WGS84")
   
   Pred <- SpatialPixelsDataFrame(points = stk.pred$predcoords, 
-                                 data = NorwegianModel$predictions, 
+                                 data = model$predictions, 
                                  proj4string = Projection)
   Pred@data$precision <- Pred@data$stddev^-2
   
-  return(list(fitted_model = NorwegianModel, prediction = Pred))
+  return(Pred)
 }
 
 

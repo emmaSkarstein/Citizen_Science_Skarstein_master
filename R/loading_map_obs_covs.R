@@ -17,6 +17,19 @@ library(rgeos)
 library(fields)
 library(viridis)
 
+
+# MAP ---------------------------------------------------------------
+# This is always the same
+norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
+norway <- setdiff(norway, filter(norway, subregion == "Jan Mayen"))
+Projection <- CRS("+proj=longlat +ellps=WGS84")
+norwayfill <- map("world", "norway", fill=TRUE, plot=FALSE, 
+                  ylim=c(58,72), xlim=c(4,32))
+IDs <- sapply(strsplit(norwayfill$names, ":"), function(x) x[1])
+norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs, 
+                                   proj4string = Projection)
+
+
 # LOADING DATA AND COVARIATES ---------------------------------------------------------------------------------
 
 # Covariates
@@ -44,18 +57,40 @@ Data_artsobs <- SpatialPointsDataFrame(coords = Data_artsobs_df[,c("decimalLongi
                                        data = Data_artsobs_df[,c("occurrenceStatus","species")],
                                        proj4string = Projection)
 
-# Now we have the covariates in 'Covariates', as well as two types of data sets in 'Data_survey' and 'Data_artsobs'.
 
-# MAP ---------------------------------------------------------------
-# This is always the same
-norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
-norway <- setdiff(norway, filter(norway, subregion == "Jan Mayen"))
-Projection <- CRS("+proj=longlat +ellps=WGS84")
-norwayfill <- map("world", "norway", fill=TRUE, plot=FALSE, 
-                  ylim=c(58,72), xlim=c(4,32))
-IDs <- sapply(strsplit(norwayfill$names, ":"), function(x) x[1])
-norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs, 
-                                   proj4string = Projection)
+
+# Separating by species:
+perch_survey_df <- filter(Data_survey_df, grepl('Perca fluviatilis', species))
+trout_survey_df <- filter(Data_survey_df, grepl('Salmo trutta', species))
+char_survey_df <- filter(Data_survey_df, grepl('Salvelinus alpinus', species))
+pike_survey_df <- filter(Data_survey_df, grepl('Esox lucius', species))
+
+perch_artsobs_df <- filter(Data_artsobs_df, grepl('Perca fluviatilis', species))
+trout_artsobs_df <- filter(Data_artsobs_df, grepl('Salmo trutta', species))
+char_artsobs_df <- filter(Data_artsobs_df, grepl('Salvelinus alpinus', species))
+pike_artsobs_df <- filter(Data_artsobs_df, grepl('Esox lucius', species))
+
+
+MakeSpDF <- function(df){
+  Projection <- CRS("+proj=longlat +ellps=WGS84")
+  sp_df <- SpatialPointsDataFrame(coords = df[,c("decimalLongitude","decimalLatitude")], 
+                                  data = df[,c("occurrenceStatus","species")],
+                                  proj4string = Projection)
+}
+
+perch_survey <- MakeSpDF(perch_survey_df)
+trout_survey <- MakeSpDF(trout_survey_df)
+char_survey <- MakeSpDF(char_survey_df)
+pike_survey <- MakeSpDF(pike_survey_df)
+
+perch_artsobs <- MakeSpDF(perch_artsobs_df)
+trout_artsobs <- MakeSpDF(trout_artsobs_df)
+char_artsobs <- MakeSpDF(char_artsobs_df)
+pike_artsobs <- MakeSpDF(pike_artsobs_df)
+
+# Now we have the covariates in 'Covariates', as well as two types of data sets in 'Data_survey' and 'Data_artsobs', 
+# and eight individual species dataframes.
+
 
 # MESH --------------------------------------------------------------
 Meshpars <- list(cutoff=0.08, max.edge=c(1, 3), offset=c(1,1))

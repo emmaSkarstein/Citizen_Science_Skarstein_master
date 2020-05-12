@@ -1,9 +1,11 @@
 # Whole procedure
 
+setwd("Citizen_Science_Skarstein_master")
+
 # Load map, covariates and observations
 
 source("R/loading_map_obs_covs.R")
-
+source("R/Model_fitting_functions.R")
 
 
 RunSpeciesModels <- function(species, survey, artsobs){
@@ -59,16 +61,16 @@ perch_models <- RunSpeciesModels("perch", perch_survey, perch_artsobs)
 saveRDS(perch_models, "R/output/perch_models.RDS")
 
 
-plot(pike_models$pred2)
-plot(trout_models$pred2)
-plot(char_models$pred2)
-plot(perch_models$pred2)
-
-
-PlotSpatialFields(pike_models$model2)
-PlotSpatialFields(trout_models$model2)
-PlotSpatialFields(char_models$model2)
-PlotSpatialFields(perch_models$model2)
+# plot(pike_models$pred2)
+# plot(trout_models$pred2)
+# plot(char_models$pred2)
+# plot(perch_models$pred2)
+# 
+# 
+# PlotSpatialFields(pike_models$model2)
+# PlotSpatialFields(trout_models$model2)
+# PlotSpatialFields(char_models$model2)
+# PlotSpatialFields(perch_models$model2)
 
 
 # Now looking only at trout:
@@ -89,32 +91,3 @@ PlotSpatialFields(trout_mod, biasfield = TRUE)
 
 
 
-
-
-
-
-
-# Projection <- CRS("+proj=longlat +ellps=WGS84")
-# 
-# Pred <- SpatialPixelsDataFrame(points = stk.pred$predcoords, 
-#                                data = NorwegianModel$predictions, 
-#                                proj4string = Projection)
-# 
-# 
-# boundary <- Mesh$mesh$loc[Mesh$mesh$segm$int$idx[,2],]
-# Nxy.scale <- 0.1 # use this to change the resolution of the predictions
-# Nxy <- round(c(diff(norway.poly@bbox[1,]), diff(norway.poly@bbox[2,]))/Nxy.scale)
-# projgrid <- inla.mesh.projector(Mesh$mesh, xlim=range(boundary[,1]), ylim=range(boundary[,2]), dims=Nxy)
-# xy.in <- splancs::inout(projgrid$lattice$loc, boundary)
-# predcoords <- projgrid$lattice$loc[which(xy.in),]
-# colnames(predcoords) <- c("X", "Y")
-# #Apred <- projgrid$proj$A[which(xy.in), ]
-# 
-# spots <- Mesh$mesh$loc[,1:2]
-# Bias <- SpatialPixelsDataFrame(points = Mesh$mesh$loc[,1:2], 
-#                                data = cbind(model2_list$fitted_model$model$summary.random$bias_field$mean,
-#                                             model2_list$fitted_model$model$summary.random$bias_field$sd), 
-#                                proj4string = Projection)
-# 
-# 
-# 

@@ -3,7 +3,6 @@ library(ggplot2)
 library(sf) # for sf objects
 library(plyr)
 library(dplyr) # for smoother dataframe-manipulation
-library(here) # for cleaner filepath-handling
 library(ggmap) # also for nice maps
 library(maps)
 library(RColorBrewer)

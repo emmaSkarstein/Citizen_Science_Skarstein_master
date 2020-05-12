@@ -3,24 +3,15 @@
 
 library(blockCV)
 library(foreach)
-library(doSNOW)
+library(doParallel)
 
+setwd("Citizen_Science_Skarstein_master")
+getwd()
 source("R/loading_map_obs_covs.R")
 source("R/Model_fitting_functions.R")
 source("R/Model_visualization_functions.R")
 
-<<<<<<< HEAD
 
-=======
-numCores <- detectCores()
-cl <- makeCluster(numCores)
-registerDoSNOW(cl)
-
-par_list <- foreach(i = 1:5) %dopar% {
-  i
-}
-stopCluster(cl)
->>>>>>> 9065197c517866b69697d3d7a7ba052dbd34f7c8
 
 CalcLinPred <- function(Model, resp){
   glm(resp ~ 1 + offset(Model$model$summary.linear.predictor[inla.stack.index(stk.test,"test")$data,"mean"]))
@@ -29,6 +20,10 @@ CalcLinPred <- function(Model, resp){
 # Make stacks for cs data, integration points and predictions, since these don't vary based on train/test split
 stks <- MakeStacks(data_structured = trout_survey, data_unstructured = trout_artsobs,
                    covariates = Covariates, Mesh = Mesh)
+
+saveRDS(stks, "stacks.RDS")
+
+#stks <- readRDS("stacks.RDS")
 stk.artsobs <- stks$artsobs
 stk.ip <- stks$ip
 stk.pred <- stks$pred
@@ -44,27 +39,25 @@ sb <- spatialBlock(speciesData = trout_survey, # sf or SpatialPoints
                    iteration = 100, # find evenly dispersed folds
                    biomod2Format = FALSE)
 
-sb2 <- spatialBlock(speciesData = Data_survey,
-                    species = "occurrenceStatus",
-                    rows = 10,
-                    selection = "checkerboard")
+# sb2 <- spatialBlock(speciesData = Data_survey,
+#                     species = "occurrenceStatus",
+#                     rows = 10,
+#                     selection = "checkerboard")
 
 folds <- sb$foldID
 
 
 
-cl <- makeCluster(detectCores())
-registerDoSNOW(cl)
-
-<<<<<<< HEAD
-=======
-outpt <- foreach(i = 1:10) %dopar%{
-  i
+cl <- parallel::makeForkCluster(detectCores())
+parallel <- FALSE
+if(parallel){
+  doParallel::registerDoParallel(cl)
+}else{
+  foreach::registerDoSEQ()
 }
->>>>>>> 9065197c517866b69697d3d7a7ba052dbd34f7c8
 
-modelList <- foreach(i = 1:k) %dopar% {
-  message("Splitting training and testing data \n")
+
+modelList <- foreach::foreach(i = 1:k) %dopar% {
   trainSet <- which(folds != i) # training set indices
   testSet <- which(folds == i) # testing set indices
   
@@ -76,12 +69,10 @@ modelList <- foreach(i = 1:k) %dopar% {
   # plot(trout_train, pch = 20, cex = 0.5, col = 'hotpink', add = TRUE)
   # plot(trout_test, pch = 20, cex = 0.5, col = 'green', add = TRUE)
   
-  message("Training stack... \n")
   stk.train <- MakeStructuredStack(trout_train, Covariates, Mesh)
   message("Test stack... \n")
   stk.test <- MakeTestStack(trout_test, Covariates, Mesh)
   
-  message("Model fitting... \n")
   Use <- c("decimalLongitude","decimalLatitude", "log_area", "perimeter_m", 
            "eurolst_bio10", "SCI")
   formula1 <- MakeFormula(cov_names = Use, second_sp_field = FALSE)
@@ -91,10 +82,10 @@ modelList <- foreach(i = 1:k) %dopar% {
   
   resp <- trout_test$occurrenceStatus
   mod_val <- CalcLinPred(Model, resp)
-  mod_val
   #list(Model, mod_val)
+  mod_val
 }
 
-stopCluster(cl)
+parallel::stopCluster(cl)
 
-
+#saveRDS(modelList, "cv_output.RDS")

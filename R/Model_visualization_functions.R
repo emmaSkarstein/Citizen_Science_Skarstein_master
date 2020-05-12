@@ -60,3 +60,17 @@ PlotSpatialFields <- function(fitmod, biasfield = TRUE){
   return(figure)
 }
 
+plot_obs <- function(dataset){
+  nosefi <- map_data("world", region = c("Norway(?!:Svalbard)", 
+                                         "Sweden", "Finland")) 
+  p <- ggplot(dataset) +
+    geom_polygon(data = nosefi, aes(long, lat, group = group), 
+                 color="#2b2b2b", fill = "white") +
+    geom_point(aes(x = decimalLongitude, y = decimalLatitude), 
+               color = 'hotpink4', alpha = 0.6, size = 0.5) +
+    theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+    guides(colour = guide_legend(override.aes = list(size=2))) +
+    ggtitle(deparse(substitute(dataset)))
+  return(p)
+}
+

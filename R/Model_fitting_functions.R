@@ -103,7 +103,65 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
   return(list(ip = stk.ip, survey = stk.survey, artsobs = stk.artsobs, pred = stk.pred))
 }
 
+MakeStructuredStack <- function(data_structured, covariates, Mesh){
+  # INTEGRATION STACK -------------------------------------------------
+  stk.ip <- PointedSDMs::MakeIntegrationStack(mesh = Mesh$mesh, data = covariates, 
+                                 area = Mesh$w, tag ='ip', InclCoords=TRUE)
+  
+  # SURVEY, STRUCTURED STACK -------------------------------------------
+  # This depends on observation input. It also takes quite some time to match covariates to observation locations.
+  NearestCovs_str <- PointedSDMs::GetNearestCovariate(points = data_structured, covs = covariates)
+  NearestCovs_str@data[ , "int.survey"] <- 1 # add intercept 
+  
+  # Projector matrix from mesh to unstructured data
+  projmat.str <- INLA::inla.spde.make.A(mesh = Mesh$mesh, loc = as.matrix(data_structured@coords))
+  
+  # If presences are Boolean, reformat
+  if(is.logical(data_structured@data[,"occurrenceStatus"])) {
+    data_structured@data[,"occurrenceStatus"] <- as.integer(data_structured@data[,"occurrenceStatus"])
+    data_structured@data[,"Ntrials"] <- rep(1, nrow(data_structured@data))
+  }
+  
+  stk.survey <- INLA::inla.stack(data=list(resp = cbind(NA, data_structured@data[,"occurrenceStatus"] ), 
+                                     Ntrials = data_structured@data[,"Ntrials"]), 
+                           A = list(1, projmat.str), 
+                           tag = "survey",
+                           effects = list(NearestCovs_str@data, 
+                                          list(shared_field = 1:Mesh$mesh$n,
+                                               id.iid = 1:Mesh$mesh$n)))
+  stk.survey
+}
 
+MakeTestStack <- function(data_test, covariates, Mesh){
+  # INTEGRATION STACK -------------------------------------------------
+  stk.ip <- PointedSDMs::MakeIntegrationStack(mesh = Mesh$mesh, data = covariates, 
+                                 area = Mesh$w, tag ='ip', InclCoords=TRUE)
+  
+  data_test@data <- dplyr::mutate(data_test@data, NACol = rep(NA)) 
+  data_test@data <- dplyr::mutate(data_test@data, zeroCol = rep(0))
+  
+  # TEST, STRUCTURED STACK -------------------------------------------
+  NearestCovs_str <- PointedSDMs::GetNearestCovariate(points = data_test, covs = covariates)
+  NearestCovs_str@data[ , "int.test"] <- 1 # add intercept 
+  
+  # Projector matrix from mesh to unstructured data
+  projmat.str <- INLA::inla.spde.make.A(mesh = Mesh$mesh, loc = as.matrix(data_test@coords))
+  
+  # If presences are Boolean, reformat
+  if(is.logical(data_test@data[,"occurrenceStatus"])) {
+    data_test@data[,"occurrenceStatus"] <- as.integer(data_test@data[,"occurrenceStatus"])
+    data_test@data[,"Ntrials"] <- rep(1, nrow(data_test@data))
+  }
+  
+  stk.survey <- INLA::inla.stack(data=list(resp = cbind(NA, data_test@data[,"NACol"] ), 
+                                     Ntrials = data_test@data[,"zeroCol"]), 
+                           A = list(1, projmat.str), 
+                           tag = "test",
+                           effects = list(NearestCovs_str@data, 
+                                          list(shared_field = 1:Mesh$mesh$n,
+                                               id.iid = 1:Mesh$mesh$n)))
+  stk.survey
+}
 
 # FITTING MODEL --------------------------------------------------------------------
 
@@ -146,6 +204,73 @@ MakePred <- function(stk.pred, model){
   Pred@data$precision <- Pred@data$stddev^-2
   
   return(Pred)
+}
+
+######## FitModelTest     #########
+FitModelTest <- function(..., formula=NULL, CovNames=NULL, mesh, spat.ind = "i", predictions=FALSE, tag.pred="pred",
+                         control.fixed=NULL, waic=FALSE, dic=TRUE, offset.formula=NULL) {
+  stck <- INLA::inla.stack(...)
+  if(is.null(CovNames)) {
+    CovNames <- unlist(stck$effects$names)
+    CovNames <- CovNames[!CovNames%in%c(spat.ind)]
+  } else {
+    if(!is.null(formula)) {
+      warning("CovNames and formula are both not NULL: CovNames will be ignored")
+    }
+  }
+  
+  #mesh <- inla.spde2.matern(mesh)
+  mesh <- INLA::inla.spde2.pcmatern(mesh,
+                              prior.range = c(2, 0.9), prior.sigma = c(1, 0.1))
+  
+  if(!is.null(spat.ind)) {
+    CovNames <- c(CovNames, paste0("f(", spat.ind, ", model=mesh)"))
+  }
+  # I'm sure there's a nicer way of doing this, but ... won't work
+  if(is.null(control.fixed)) {
+    control.fixed <- list(mean=0)
+  }
+  
+  if(is.null(formula)) {
+    Formula <- formula(paste(c("resp ~ 0 ", CovNames), collapse="+"))
+  } else {
+    if(is.null(spat.ind)) {
+      Formula <- formula
+    } else {
+      if(any(grepl(paste0('(', spat.ind, ','), formula, fixed=TRUE))) {
+        Formula <- formula
+        warning(paste0(spat.ind, " already in formula, so will be ignored"))
+      } else {
+        Formula <- update(formula, paste0(" ~ . + f(", spat.ind, ", model=mesh)"))    }
+    }
+  }
+  
+  # Fit model including predictions
+  # if(!is.null(offset.formula)){
+  #   Formula <- update(Formula, paste0(" ~ . + offset(offset.formula)"))
+  # }
+  #Formula <- update(Formula, paste0(" ~ . + offset(",offset.formula, ")"))
+  # Formula <- formula("resp ~ 0")
+  mod <- INLA::inla(Formula, family=c('poisson','binomial'),
+              control.family = list(list(link = "log"), list(link = "cloglog")),
+              data=INLA::inla.stack.data(stck), verbose=TRUE,
+              control.results=list(return.marginals.random=FALSE,
+                                   return.marginals.predictor=FALSE),
+              control.predictor=list(A=INLA::inla.stack.A(stck), link=NULL, compute=TRUE),
+              control.fixed=control.fixed,
+              E=INLA::inla.stack.data(stck)$e, Ntrials=INLA::inla.stack.data(stck)$Ntrials,
+              offset = offset.formula,
+              control.compute=list(waic=waic, dic=dic))
+  
+  if(predictions) {
+    id <- INLA::inla.stack.index(stck,tag.pred)$data
+    pred <- data.frame(mean=mod$summary.fitted.values$mean[id],
+                       stddev=mod$summary.fitted.values$sd[id])
+    res <- list(model=mod, predictions=pred)
+  } else {
+    res <- mod
+  }
+  res
 }
 
 

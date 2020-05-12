@@ -9,7 +9,18 @@ source("R/loading_map_obs_covs.R")
 source("R/Model_fitting_functions.R")
 source("R/Model_visualization_functions.R")
 
+<<<<<<< HEAD
 
+=======
+numCores <- detectCores()
+cl <- makeCluster(numCores)
+registerDoSNOW(cl)
+
+par_list <- foreach(i = 1:5) %dopar% {
+  i
+}
+stopCluster(cl)
+>>>>>>> 9065197c517866b69697d3d7a7ba052dbd34f7c8
 
 CalcLinPred <- function(Model, resp){
   glm(resp ~ 1 + offset(Model$model$summary.linear.predictor[inla.stack.index(stk.test,"test")$data,"mean"]))
@@ -45,6 +56,12 @@ folds <- sb$foldID
 cl <- makeCluster(detectCores())
 registerDoSNOW(cl)
 
+<<<<<<< HEAD
+=======
+outpt <- foreach(i = 1:10) %dopar%{
+  i
+}
+>>>>>>> 9065197c517866b69697d3d7a7ba052dbd34f7c8
 
 modelList <- foreach(i = 1:k) %dopar% {
   message("Splitting training and testing data \n")

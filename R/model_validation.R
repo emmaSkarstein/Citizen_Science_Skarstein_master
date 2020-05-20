@@ -6,7 +6,7 @@ library(foreach)
 library(doParallel)
 
 setwd("Citizen_Science_Skarstein_master")
-getwd()
+
 source("R/loading_map_obs_covs.R")
 source("R/Model_fitting_functions.R")
 source("R/Model_visualization_functions.R")
@@ -18,12 +18,12 @@ CalcLinPred <- function(Model, resp){
 }
 
 # Make stacks for cs data, integration points and predictions, since these don't vary based on train/test split
-stks <- MakeStacks(data_structured = trout_survey, data_unstructured = trout_artsobs,
-                   covariates = Covariates, Mesh = Mesh)
+# stks <- MakeStacks(data_structured = trout_survey, data_unstructured = trout_artsobs,
+#                    covariates = Covariates, Mesh = Mesh)
+# 
+# saveRDS(stks, "stacks.RDS")
 
-saveRDS(stks, "stacks.RDS")
-
-#stks <- readRDS("stacks.RDS")
+stks <- readRDS("stacks.RDS")
 stk.artsobs <- stks$artsobs
 stk.ip <- stks$ip
 stk.pred <- stks$pred
@@ -69,10 +69,12 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   # plot(trout_train, pch = 20, cex = 0.5, col = 'hotpink', add = TRUE)
   # plot(trout_test, pch = 20, cex = 0.5, col = 'green', add = TRUE)
   
+  print("Training stack... \n")
   stk.train <- MakeStructuredStack(trout_train, Covariates, Mesh)
-  message("Test stack... \n")
+  print("Test stack... \n")
   stk.test <- MakeTestStack(trout_test, Covariates, Mesh)
   
+  print("Fitting model... \n")
   Use <- c("decimalLongitude","decimalLatitude", "log_area", "perimeter_m", 
            "eurolst_bio10", "SCI")
   formula1 <- MakeFormula(cov_names = Use, second_sp_field = FALSE)
@@ -88,4 +90,6 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
 
 parallel::stopCluster(cl)
 
-#saveRDS(modelList, "cv_output.RDS")
+saveRDS(modelList, "cv_output_seq.RDS")
+
+#res <- readRDS("cv_output.RDS")

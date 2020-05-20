@@ -28,6 +28,7 @@ library(reshape2)
 library(rgeos)
 library(fields)
 library(viridis)
+library(spatialEco)
 
 
 
@@ -206,14 +207,14 @@ MakePred <- function(stk.pred, model){
 }
 
 ######## FitModelTest     #########
-FitModelTest <- function(..., formula=NULL, CovNames=NULL, mesh, spat.ind = "i", predictions=FALSE, tag.pred="pred",
-                         control.fixed=NULL, waic=FALSE, dic=TRUE, offset.formula=NULL) {
+FitModelTest <- function(..., Formula, CovNames=NULL, mesh, spat.ind = "i", predictions=FALSE, tag.pred="pred",
+                         control.fixed=NULL, waic=FALSE, dic=TRUE, offset.formula=NULL, verbose = FALSE) {
   stck <- INLA::inla.stack(...)
   if(is.null(CovNames)) {
     CovNames <- unlist(stck$effects$names)
     CovNames <- CovNames[!CovNames%in%c(spat.ind)]
   } else {
-    if(!is.null(formula)) {
+    if(!is.null(Formula)) {
       warning("CovNames and formula are both not NULL: CovNames will be ignored")
     }
   }
@@ -230,20 +231,6 @@ FitModelTest <- function(..., formula=NULL, CovNames=NULL, mesh, spat.ind = "i",
     control.fixed <- list(mean=0)
   }
   
-  if(is.null(formula)) {
-    Formula <- formula(paste(c("resp ~ 0 ", CovNames), collapse="+"))
-  } else {
-    if(is.null(spat.ind)) {
-      Formula <- formula
-    } else {
-      if(any(grepl(paste0('(', spat.ind, ','), formula, fixed=TRUE))) {
-        Formula <- formula
-        warning(paste0(spat.ind, " already in formula, so will be ignored"))
-      } else {
-        Formula <- update(formula, paste0(" ~ . + f(", spat.ind, ", model=mesh)"))    }
-    }
-  }
-  
   # Fit model including predictions
   # if(!is.null(offset.formula)){
   #   Formula <- update(Formula, paste0(" ~ . + offset(offset.formula)"))
@@ -252,7 +239,7 @@ FitModelTest <- function(..., formula=NULL, CovNames=NULL, mesh, spat.ind = "i",
   # Formula <- formula("resp ~ 0")
   mod <- INLA::inla(Formula, family=c('poisson','binomial'),
               control.family = list(list(link = "log"), list(link = "cloglog")),
-              data=INLA::inla.stack.data(stck), verbose=TRUE,
+              data=INLA::inla.stack.data(stck), verbose=verbose,
               control.results=list(return.marginals.random=FALSE,
                                    return.marginals.predictor=FALSE),
               control.predictor=list(A=INLA::inla.stack.A(stck), link=NULL, compute=TRUE),
@@ -272,7 +259,21 @@ FitModelTest <- function(..., formula=NULL, CovNames=NULL, mesh, spat.ind = "i",
   res
 }
 
+CalcLinPred <- function(Model, resp){
+  glm(resp ~ 1 + offset(Model$model$summary.linear.predictor[inla.stack.index(stk.test,"test")$data,"mean"]))
+}
 
+
+TrainTest = function(sb, data, k){
+  Projection <- CRS("+proj=longlat +ellps=WGS84")
+  training_fold_id <- list(sapply(1:k, function(s) sb$blocks@data$layer[sb$blocks@data$folds==s]))
+  training_id <- list(sapply(1:k, function(s) which(sapply(slot(sb$blocks, 'polygons'), function(i) slot(i, 'ID')) %in% training_fold_id[[1]][[s]])))
+  training_blocks <- list(sapply(1:k, function(s) SpatialPolygons(sb$blocks@polygons[training_id[[1]][[s]]], proj4string=Projection)))
+  training_polydf <- list(sapply(1:k, function(s)
+    SpatialPolygonsDataFrame(training_blocks[[1]][[s]], data.frame(row.names=sapply(slot(training_blocks[[1]][[s]], 'polygons'), function(i) slot(i, 'ID'))))))
+  training_points <- list(sapply(1:k, function(s) point.in.poly(data, training_polydf[[1]][[s]]) %>% sp.na.omit()))
+  return("train_test_folds" = training_points)
+}
 
 
 

@@ -42,7 +42,7 @@ head(covariateData)
 Covariates <- SpatialPointsDataFrame(coords = covariateData[,c("decimalLongitude","decimalLatitude")],
                                      data = covariateData, 
                                      proj4string = Projection)
-Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates
+#Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates - do this inside CV!
 
 # Observations
 # The data is always the same, but will possibly be split into different sections for validation

@@ -21,7 +21,7 @@ source("R/Model_visualization_functions.R")
 
 
 
-# Divide into training and test-folds for k-fold cross validation:
+# DIVIDE INTO TRAINING AND TEST FOLDS FOR MODEL VALIDATION
 k <- 5
 sb <- spatialBlock(speciesData = trout_survey, # sf or SpatialPoints
                    species = "occurrenceStatus", # the response column (binomial or multi-class)
@@ -31,6 +31,10 @@ sb <- spatialBlock(speciesData = trout_survey, # sf or SpatialPoints
                    selection = "random",
                    iteration = 100, # find evenly dispersed folds
                    biomod2Format = FALSE)
+
+# SELECTING TRAINING AND TEST SETS
+survey_traintest <- TrainTest(sb, trout_survey, sb$k)
+artsobs_traintest <- TrainTest(sb, trout_artsobs, sb$k)
 
 
 # Setting up parallel backend
@@ -44,10 +48,7 @@ if(parallel){
 
 
 modelList <- foreach::foreach(i = 1:k) %dopar% {
-  # SELECTING TRAINING AND TEST SETS
-  survey_traintest <- TrainTest(sb, trout_survey, sb$k)
-  artsobs_traintest <- TrainTest(sb, trout_artsobs, sb$k)
-
+  
   survey_train <- do.call("rbind", unlist(sapply((1:k)[-i], function(s) survey_traintest[[1]][[s]])))
   artsobs_train <- do.call("rbind", unlist(sapply((1:k)[-i], function(s) artsobs_traintest[[1]][[s]])))
   survey_test <- survey_traintest[[1]][[i]]
@@ -105,6 +106,12 @@ parallel::stopCluster(cl)
 saveRDS(modelList, "cv_output_4mods.RDS")
 
 modelList
-#res <- readRDS("cv_output_4mods.RDS")
+res <- readRDS("cv_output_4mods.RDS")
 
+mod1_res <- res[[1]]$dic1
 
+test <- as.matrix(sapply(res, '['))
+rowMeans(test)
+
+test <- matrix(unlist(res), ncol = 5)
+rowm <- rowMeans(test)

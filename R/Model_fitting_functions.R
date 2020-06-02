@@ -78,11 +78,11 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
   
   # ARTSOBS, UNSTRUCTURED STACK -----------------------------------------
   # Finding the covariates that are closest to the observation points
-  NearestCovs_unstr <- GetNearestCovariate(points = Data_artsobs, covs = Covariates)
+  NearestCovs_unstr <- GetNearestCovariate(points = data_unstructured, covs = covariates)
   NearestCovs_unstr@data[ , "int.artsobs"] <- 1 # add intercept 
   
   # Projector matrix from mesh to unstructured data
-  projmat.artsobs <- inla.spde.make.A(mesh = Mesh$mesh, loc = as.matrix(Data_artsobs@coords))
+  projmat.artsobs <- inla.spde.make.A(mesh = Mesh$mesh, loc = as.matrix(data_unstructured@coords))
   
   stk.artsobs <- inla.stack(data = list(resp = cbind(rep(1,nrow(NearestCovs_unstr)), NA),
                                         #e = rep(0, nrow(NearestCovs_unstr))), # why is this zero?

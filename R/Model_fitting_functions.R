@@ -85,7 +85,8 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
   projmat.artsobs <- inla.spde.make.A(mesh = Mesh$mesh, loc = as.matrix(Data_artsobs@coords))
   
   stk.artsobs <- inla.stack(data = list(resp = cbind(rep(1,nrow(NearestCovs_unstr)), NA),
-                                        e = rep(0, nrow(NearestCovs_unstr))),
+                                        #e = rep(0, nrow(NearestCovs_unstr))), # why is this zero?
+                                        e = rep(1, nrow(NearestCovs_unstr))),
                             A = list(1, projmat.artsobs), 
                             tag = "artsobs",
                             effects = list(NearestCovs_unstr@data, 
@@ -104,9 +105,6 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
 }
 
 MakeStructuredStack <- function(data_structured, covariates, Mesh){
-  # INTEGRATION STACK -------------------------------------------------
-  stk.ip <- PointedSDMs::MakeIntegrationStack(mesh = Mesh$mesh, data = covariates, 
-                                 area = Mesh$w, tag ='ip', InclCoords=TRUE)
   
   # SURVEY, STRUCTURED STACK -------------------------------------------
   # This depends on observation input. It also takes quite some time to match covariates to observation locations.
@@ -133,10 +131,7 @@ MakeStructuredStack <- function(data_structured, covariates, Mesh){
 }
 
 MakeTestStack <- function(data_test, covariates, Mesh){
-  # INTEGRATION STACK -------------------------------------------------
-  stk.ip <- PointedSDMs::MakeIntegrationStack(mesh = Mesh$mesh, data = covariates, 
-                                 area = Mesh$w, tag ='ip', InclCoords=TRUE)
-  
+
   data_test@data <- dplyr::mutate(data_test@data, NACol = rep(NA)) 
   data_test@data <- dplyr::mutate(data_test@data, zeroCol = rep(0))
   

@@ -71,7 +71,7 @@ Use <- c("decimalLongitude","decimalLatitude", "log_area", "perimeter_m",
 Covariates <- SpatialPointsDataFrame(coords = covariateData[,c("decimalLongitude","decimalLatitude")],
                                      data = covariateData[,Use], 
                                      proj4string = Projection)
-Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates
+#Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates
 
 # Observations
 Data_survey_df <- readRDS("../Fish_status_survey_of_nordic_lakes/data/clean.rds")

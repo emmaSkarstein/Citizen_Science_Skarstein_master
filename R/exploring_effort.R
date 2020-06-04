@@ -1,6 +1,6 @@
 # EXPLORING EFFORT
 
-
+setwd("Citizen_Science_Skarstein_master")
 # Loading observations and covariates
 source("R/loading_map_obs_covs.R")
 
@@ -22,7 +22,7 @@ norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs,
                                    proj4string = Projection)
 
 # INTEGRATION STACK -------------------------------------------------
-stk.ip <- MakeIntegrationStack(mesh = Mesh$mesh, data = covariates, 
+stk.ip <- MakeIntegrationStack(mesh = Mesh$mesh, data = Covariates, 
                                area = Mesh$w, tag ='ip', InclCoords=TRUE)
 
 
@@ -62,9 +62,18 @@ stk.artsobs_area <- inla.stack(data = list(resp = cbind(rep(1,nrow(NearestCovs_u
                                                bias_field = 1:Mesh$mesh$n, # This is for the second spatial field!
                                                id.iid = 1:Mesh$mesh$n))) 
 
+stk.artsobs_default <- inla.stack(data = list(resp = cbind(rep(1,nrow(NearestCovs_unstr)), NA)),
+                               A = list(1, projmat.artsobs), 
+                               tag = "artsobs",
+                               effects = list(NearestCovs_unstr@data, 
+                                              list(shared_field = 1:Mesh$mesh$n, 
+                                                   bias_field = 1:Mesh$mesh$n, # This is for the second spatial field!
+                                                   id.iid = 1:Mesh$mesh$n)))
+
+
 
 stks <- MakeStacks(data_structured = trout_survey, data_unstructured = trout_artsobs,
-                   covariates = Covariates, Mesh = Mesh)
+                   env_covariates = env_covariates, all_covariates = Covariates, Mesh = Mesh)
 
 stk.survey <- stks$survey
 stk.ip <- stks$ip
@@ -75,33 +84,30 @@ Use <- c("decimalLongitude","decimalLatitude", "log_area", "perimeter_m",
 Use_CS <- c(Use, "distance_to_road", "HFP")
 formula4 <- MakeFormula(cov_names = Use_CS, second_sp_field = TRUE)
 
+print("Model_0...")
 model4_0 <- FitModelTest(stk.survey, stk.artsobs0, stk.ip, stk.pred$stk,
                        Formula = formula4, mesh = Mesh$mesh, predictions = TRUE)
+print("Model_1...")
 model4_1 <- FitModelTest(stk.survey, stk.artsobs1, stk.ip, stk.pred$stk,
                          Formula = formula4, mesh = Mesh$mesh, predictions = TRUE)
+print("Model_area...")
 model4_area <- FitModelTest(stk.survey, stk.artsobs_area, stk.ip, stk.pred$stk,
                          Formula = formula4, mesh = Mesh$mesh, predictions = TRUE)
+#print("Model_default...")
+#model4_default <- FitModelTest(stk.survey, stk.artsobs_default, stk.ip, stk.pred$stk,
+#                            Formula = formula4, mesh = Mesh$mesh, predictions = TRUE)
+# formula1 <- "resp ~ int.survey - 1 + decimalLongitude + decimalLatitude + log_area + 
+#              perimeter_m + eurolst_bio10 + distance_to_road + HFP + 
+#              f(shared_field, model = Mesh$spde)"
+# 
+# model4_noCS <- FitModelTest(stk.survey, stk.ip, stk.pred$stk,
+#                             Formula = formula1, mesh = Mesh$mesh, predictions = TRUE)
 saveRDS(model4_0, "R/output/model_0.RDS")
 saveRDS(model4_1, "R/output/model_1.RDS")
 saveRDS(model4_area, "R/output/model_area.RDS")
+#saveRDS(model4_default, "R/output/model_default.RDS")
 saveRDS(stk.pred, "R/output/stkpred.RDS")
 
-resp <- trout_survey$occurrenceStatus
 
-model4_0$model$dic$deviance.mean
-model4_1$model$dic$deviance.mean
-model4_area$model$dic$deviance.mean
 
-Pred_0 <- SpatialPixelsDataFrame(points=stk.pred$predcoords, 
-                               data=model4_0$predictions, 
-                               proj4string=Projection)
-Pred_1 <- SpatialPixelsDataFrame(points=stk.pred$predcoords, 
-                                 data=model4_1$predictions, 
-                                 proj4string=Projection)
-Pred_area <- SpatialPixelsDataFrame(points=stk.pred$predcoords, 
-                                data=model4_area$predictions, 
-                                proj4string=Projection)
 
-plot(Pred_0)
-plot(Pred_1)
-plot(Pred_area)

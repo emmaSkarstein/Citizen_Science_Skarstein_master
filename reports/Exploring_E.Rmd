@@ -1,0 +1,87 @@
+---
+title: "Exploring E"
+author: "Emma Skarstein"
+date: "4/6/2020"
+output: 
+  html_document:
+    theme: journal
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r, message = FALSE, warning = FALSE}
+library(sf)
+library(sp)
+```
+
+First just loading the stuff we need:
+```{r}
+model_0 <- readRDS("../R/output/model_0.RDS")
+model_1 <- readRDS("../R/output/model_1.RDS")
+model_area <- readRDS("../R/output/model_area.RDS")
+#model_logarea <- readRDS("../R/output/model_logarea.RDS")
+
+stk.pred <- readRDS("../R/output/stkpred.RDS")
+Projection <- CRS("+proj=longlat +ellps=WGS84")
+```
+I ran three models where the only change was in the E used. All code for fitting the models is on my Github-page, [here is the main script used](https://github.com/emmaSkarstein/Citizen_Science_Skarstein_master/blob/master/R/exploring_effort.R). I also wanted to do a model with `E = log_area` and one where I didn't specify E at all (so that it would just use the default, in order to check if this gave the exact same model as the one with `E = rep(1, ...)`), but both these models caused INLA to crash, and I decided to not try to figure out the issue now.
+
+Here are the means of the parameter estimates for all the models:
+```{r}
+mean_df <- data.frame(model_0 = model_0$model$summary.fixed$mean,
+            model_1 = model_1$model$summary.fixed$mean,
+            model_area = model_area$model$summary.fixed$mean)
+row.names(mean_df) <- row.names(model_0$model$summary.fixed['mean'])
+mean_df
+```
+
+And here are the standard deviations of the parameter estimates:
+
+```{r}
+sd_df <- data.frame(model_0 = model_0$model$summary.fixed$sd,
+            model_1 = model_1$model$summary.fixed$sd,
+            model_area = model_area$model$summary.fixed$sd)
+row.names(sd_df) <- row.names(model_0$model$summary.fixed['sd'])
+sd_df
+```
+
+And here are the log-marginal likelihoods:
+```{r}
+mlik_df <- data.frame(model_0 = model_0$model$mlik,
+            model_1 = model_1$model$mlik,
+            model_area = model_area$model$mlik)
+mlik_df
+```
+Here are the plotted predictions for each of the models:
+```{r, echo = FALSE}
+Pred_0 <- SpatialPixelsDataFrame(points=stk.pred$predcoords, 
+                               data=model_0$predictions, 
+                               proj4string=Projection)
+Pred_1 <- SpatialPixelsDataFrame(points=stk.pred$predcoords, 
+                                 data=model_1$predictions, 
+                                 proj4string=Projection)
+Pred_area <- SpatialPixelsDataFrame(points=stk.pred$predcoords, 
+                                data=model_area$predictions, 
+                                proj4string=Projection)
+```
+```{r, echo = FALSE, fig.width=12}
+layout(matrix(1:6, 2, 3), heights = c(4,0.6))
+plot(Pred_0, what = "image", main = "model_0")
+plot(Pred_0, what = "scale", axis.pos = 1)
+plot(Pred_1, what = "image", main = "model_1")
+plot(Pred_1, what = "scale", axis.pos = 1)
+plot(Pred_area, what = "image", main = "model_area")
+plot(Pred_area, what = "scale", axis.pos = 1)
+
+```
+
+Finally, here are the model summaries, just to see what the full model was:
+(observation that I don't know how to interpret: only for model_0 has the dic been calculated.)
+```{r}
+summary(model_0$model)
+summary(model_1$model)
+summary(model_area$model)
+
+```
+

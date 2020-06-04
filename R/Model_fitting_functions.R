@@ -36,7 +36,7 @@ library(spatialEco)
 
 
 
-MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
+MakeStacks <- function(data_structured, data_unstructured, env_covariates, all_covariates, Mesh){
 
   norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
   norway <- setdiff(norway, filter(norway, subregion == "Jan Mayen"))
@@ -48,13 +48,13 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
                                      proj4string = Projection)
   
   # INTEGRATION STACK -------------------------------------------------
-  stk.ip <- MakeIntegrationStack(mesh = Mesh$mesh, data = covariates, 
+  stk.ip <- MakeIntegrationStack(mesh = Mesh$mesh, data = all_covariates, 
                                  area = Mesh$w, tag ='ip', InclCoords=TRUE)
   
   
   # SURVEY, STRUCTURED STACK -------------------------------------------
   # This depends on observation input. It also takes quite some time to match covariates to observation locations.
-  NearestCovs_str <- GetNearestCovariate(points = data_structured, covs = covariates)
+  NearestCovs_str <- GetNearestCovariate(points = data_structured, covs = env_covariates)
   NearestCovs_str@data[ , "int.survey"] <- 1 # add intercept 
   
   # Projector matrix from mesh to unstructured data
@@ -78,7 +78,7 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
   
   # ARTSOBS, UNSTRUCTURED STACK -----------------------------------------
   # Finding the covariates that are closest to the observation points
-  NearestCovs_unstr <- GetNearestCovariate(points = data_unstructured, covs = covariates)
+  NearestCovs_unstr <- GetNearestCovariate(points = data_unstructured, covs = all_covariates)
   NearestCovs_unstr@data[ , "int.artsobs"] <- 1 # add intercept 
   
   # Projector matrix from mesh to unstructured data
@@ -97,7 +97,7 @@ MakeStacks <- function(data_structured, data_unstructured, covariates, Mesh){
   # PREDICTIONS -----------------------------------------------------------
   Nxy.scale <- 0.1 # use this to change the resolution of the predictions
   Nxy <- round(c(diff(norway.poly@bbox[1,]), diff(norway.poly@bbox[2,]))/Nxy.scale)
-  stk.pred <- MakeProjectionGrid(nxy=Nxy, mesh=Mesh$mesh, data=covariates, 
+  stk.pred <- MakeProjectionGrid(nxy=Nxy, mesh=Mesh$mesh, data=all_covariates, 
                                  tag='pred', boundary=norway.poly)
   
   # Return list of all stacks

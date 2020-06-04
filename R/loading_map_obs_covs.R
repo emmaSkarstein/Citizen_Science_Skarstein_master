@@ -36,12 +36,15 @@ norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs,
 covariateData <- readRDS("data/environmental_covariates.RDS")
 covariateData <- covariateData[complete.cases(covariateData$decimalLatitude,covariateData$decimalLongitude,covariateData$area_km2,covariateData$HFP),]
 covariateData <- covariateData %>% mutate(log_area = log(area_km2)) %>% select(-c(ebint, no_vatn_lnr, eb_waterregionID))
+env_covariateData <- covariateData %>% select(-c(distance_to_road, HFP))
 
-head(covariateData)
 
 Covariates <- SpatialPointsDataFrame(coords = covariateData[,c("decimalLongitude","decimalLatitude")],
                                      data = covariateData, 
                                      proj4string = Projection)
+env_covariates <- SpatialPointsDataFrame(coords = env_covariateData[,c("decimalLongitude","decimalLatitude")],
+                                         data = env_covariateData, 
+                                         proj4string = Projection)
 #Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates - do this inside CV!
 
 # Observations
@@ -75,6 +78,7 @@ MakeSpDF <- function(df){
   sp_df <- SpatialPointsDataFrame(coords = df[,c("decimalLongitude","decimalLatitude")], 
                                   data = df[,c("occurrenceStatus","species")],
                                   proj4string = Projection)
+  sp_df
 }
 
 perch_survey <- MakeSpDF(perch_survey_df)

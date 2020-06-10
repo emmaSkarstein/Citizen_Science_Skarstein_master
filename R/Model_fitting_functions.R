@@ -85,8 +85,9 @@ MakeStacks <- function(data_structured, data_unstructured, env_covariates, all_c
   projmat.artsobs <- inla.spde.make.A(mesh = Mesh$mesh, loc = as.matrix(data_unstructured@coords))
   
   stk.artsobs <- inla.stack(data = list(resp = cbind(rep(1,nrow(NearestCovs_unstr)), NA),
-                                        #e = rep(0, nrow(NearestCovs_unstr))), # why is this zero?
-                                        e = rep(1, nrow(NearestCovs_unstr))),
+                                        e = rep(0, nrow(NearestCovs_unstr))), # why is this zero?
+                                        #e = rep(1, nrow(NearestCovs_unstr))),
+                                        #e = exp(rep(NearestCovs_unstr@data$log_area))),
                             A = list(1, projmat.artsobs), 
                             tag = "artsobs",
                             effects = list(NearestCovs_unstr@data, 

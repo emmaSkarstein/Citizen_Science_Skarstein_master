@@ -35,7 +35,11 @@ norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs,
 # This section varies based on which covariates are used
 covariateData <- readRDS("data/environmental_covariates.RDS")
 covariateData <- covariateData[complete.cases(covariateData$decimalLatitude,covariateData$decimalLongitude,covariateData$area_km2,covariateData$HFP),]
-covariateData <- covariateData %>% mutate(log_area = log(area_km2)) %>% select(-c(ebint, no_vatn_lnr, eb_waterregionID))
+covariateData <- covariateData %>% 
+  mutate(log_area = log(area_km2), 
+         log_perimeter = log(perimeter_m), 
+         log_catchment = log(catchment_area_km2)) %>% 
+  select(-c(ebint, no_vatn_lnr, eb_waterregionID))
 env_covariateData <- covariateData %>% select(-c(distance_to_road, HFP))
 
 

@@ -1,0 +1,278 @@
+---
+title: "Various visualizations"
+subtitle: "Supplement for discussion"
+author: "Emma Skarstein"
+date: "9/6/2020"
+output: 
+  html_document:
+    theme: journal
+    code_folding: hide
+    number_sections: true
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 12)
+```
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(sf)
+library(sp)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(fishualize)
+library(hexbin)
+library(tidyr)
+library(knitr)
+library(summarytools)
+library(pander)
+library(maps)
+library(maptools)
+library(PointedSDMs)
+```
+
+```{r}
+trout_artsobs <- readRDS("../R/output/trout_artsobs.RDS")
+trout_survey <- readRDS("../R/output/trout_survey.RDS")
+trout_artsobs_df <- readRDS("../R/output/trout_artsobs_df.RDS")
+trout_survey_df <- readRDS("../R/output/trout_survey_df.RDS")
+
+```
+# Looking at the observations
+
+```{r setting up graphic stuff}
+# Empty map theme
+empty_theme_map <- theme(                              
+  plot.background = element_blank(), 
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.border = element_blank(), 
+  panel.background = element_blank(),
+  axis.line = element_blank(),
+  axis.ticks = element_blank(),
+  axis.title.x = element_blank(), 
+  axis.title.y = element_blank(),
+  axis.text = element_blank()
+)
+empty_theme <- theme(                              
+  plot.background = element_blank(), 
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.border = element_blank(), 
+  panel.background = element_blank(),
+  axis.text.x = element_blank(),
+  axis.title.x = element_blank()
+)
+
+# Setting up color palette
+trutta_colors <- fish(n = 20, option = "Salmo_trutta")
+#fishualize(option = "Salmo_trutta")
+
+```
+
+## Observation map
+```{r}
+norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
+norway <- dplyr::setdiff(norway, filter(norway, subregion == "Jan Mayen"))
+p1 <- ggplot(data.frame(trout_artsobs)) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+                 color=trutta_colors[11], fill = trutta_colors[11]) +
+  geom_point(aes(x = decimalLongitude, y = decimalLatitude), 
+               color = trutta_colors[4], alpha = 0.8, size = 1) +
+  empty_theme_map +
+  ggtitle("Artsobservasjoner")
+
+p2 <- ggplot(data.frame(trout_survey)) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+                 color=trutta_colors[11], fill = trutta_colors[11]) +
+  geom_point(aes(x = decimalLongitude, y = decimalLatitude, color = occurrenceStatus), alpha = 0.8, size = 1) +
+  scale_color_manual(values=c(trutta_colors[15],trutta_colors[4])) +
+  theme(legend.position = "none") +
+  empty_theme_map +
+  ggtitle("Fish status survey of nordic lakes")
+  
+ggarrange(p1, p2)
+```
+
+Above, I have plotted all the observations for both data sets. Note that the "Fish status survey of nordic lakes" data set is presence/absence, presences are in red in both plots, while absences are in grey when reported.
+
+To get a better impression of observation density across the map, we look at a hexagon map.
+```{r}
+p1 <- ggplot(data.frame(trout_artsobs), aes(x = decimalLongitude, y = decimalLatitude)) +
+  #geom_polygon(data = norway, aes(long, lat, group = group)) +
+  geom_hex() +
+  empty_theme_map +
+  scale_fill_fish(option = "Salmo_trutta", begin = 0.52, end = 0.9, direction = 1)+
+  ggtitle("Artsobservasjoner")
+
+p2 <- ggplot(data.frame(trout_survey), aes(x = decimalLongitude, y = decimalLatitude)) +
+  #geom_polygon(data = norway, aes(long, lat, group = group)) +
+  geom_hex() +
+  empty_theme_map +
+  scale_fill_fish(option = "Salmo_trutta", begin = 0.52, end = 0.9, direction = 1)+
+  ggtitle("Fish status survey of nordic lakes")
+
+ggarrange(p1, p2)
+
+```
+
+## Number of observations per year
+```{r obs per year, fig.height=3}
+time_counts <- count(trout_artsobs_df, year)
+
+ggplot(time_counts, aes(x = year, y = n)) + 
+  geom_line(size = 1, color = trutta_colors[7]) +
+  theme_minimal() +
+  theme(axis.title = element_blank()) +
+  geom_vline(xintercept = 1996, linetype = "dotted", color = trutta_colors[13], size = 1)
+
+```
+
+Number of observations per year for the Artsobservasjoner data. The dotted vertical line is in 1996, which is the year all the survey observations are made.
+
+## Number of observations per square kilometer by county
+
+```{r fylke_barplot}
+fylke_areal <- c(4918, 9155, 14912, 48631, 27398, 15438, 14469, 38472, 25192, 454, 4187, 9377, 18623, 15298, 24879, 41898, 7279, 2225)
+
+trout_artsobs_df$county.y <- trout_artsobs_df$county.y %>% recode("Sør-Trøndelag" = "Trøndelag", "Nord-Trøndelag" = "Trøndelag")
+dense_fylke <- cbind(count(trout_artsobs_df, vars = county.y), fylke_areal) %>% mutate(obs_per_area = n/fylke_areal)
+
+ggplot(dense_fylke, aes(x = vars, y = obs_per_area)) + 
+  geom_bar(stat = "identity", color=trutta_colors[2], fill=trutta_colors[2], width = 0.7) + 
+  #geom_text(aes(label = obs_in_county), hjust = -0.5, color="black", size=4) +
+  coord_flip() +
+ # ylab("Observations per km^2") +
+  theme_minimal() + 
+  theme(text = element_text(size = 15),
+        axis.title.y = element_blank())+
+  empty_theme
+
+```
+Number of observations per square km, by county, in the Artsobservasjoner data.
+
+# Explanatory variables
+The possible explanatory variables are
+
+* `area_km2`: the area of the lake, in square kilometers
+* `perimeter_m`: the perimeter of the lake, in meters
+* `distance_to_road`: the distance to the closest road
+* `eurolst_bio10`: average temperature of the warmest annual quarter, in degrees celcius multiplied by 10
+* `catchment_area_km2`: the catchment area of the lake, in square kilometers
+* `SCI`: shoreline complexity index
+* `HFP`: human footprint index
+
+What is intersting to look at here? Distribution of variables in space, but also distribution of the variables themselves.
+
+```{r}
+Covariates <- readRDS("../R/output/Covariates.RDS")
+Cov_long <- gather(data.frame(Covariates), key = variable, value = value, area_km2:log_catchment)
+```
+
+## Explanatory variables on a map
+```{r, fig.height=16}
+plot_exp_var <- function(var){
+  ggplot(Cov_long %>% dplyr::select(variable, value, decimalLatitude, decimalLongitude) %>% 
+                filter(variable==var)) +
+    geom_polygon(data = norway, aes(long, lat, group = group), 
+                 color = "grey", fill = "grey") +
+    geom_point(aes(x = decimalLongitude, y = decimalLatitude, color = value),
+             alpha = 0.8, size = 0.3) +
+    scale_color_fish(option = "Salmo_trutta") +
+    #scale_color_gradient(low = trutta_colors[], high = "darkblue")
+    empty_theme_map +
+    ggtitle(var)
+}
+Cov_names <- unique(Cov_long$variable)
+var_plots <- lapply(Cov_names, plot_exp_var)
+
+ggarrange(plotlist = var_plots, nrow = 4, ncol = 3)
+
+```
+
+## Explanatory variables summary
+```{r covariate table, results = 'asis'}
+descr(data.frame(Covariates)[,4:13], stats = "fivenum", transpose = TRUE)
+```
+
+## Explanatory variables histograms
+To display sort of the same info as the table.
+
+```{r, message=FALSE}
+ggplot(Cov_long, aes(x = value)) +
+    geom_histogram(fill = trutta_colors[2], color = trutta_colors[2]) +
+      facet_wrap(~variable, scales = 'free_x', nrow = 2) +
+  theme_minimal() + 
+  theme(axis.title = element_blank())
+    
+```
+
+# Exploring model output
+Spatial fields, predictions, comparing preformance of the four models
+
+```{r, warning = FALSE, message=FALSE}
+Projection <- CRS("+proj=longlat +ellps=WGS84")
+norwayfill <- map("world", "norway", fill=TRUE, plot=FALSE, 
+                  ylim=c(58,72), xlim=c(4,32))
+IDs <- sapply(strsplit(norwayfill$names, ":"), function(x) x[1])
+norway.poly <- map2SpatialPolygons(norwayfill, IDs = IDs, 
+                                   proj4string = Projection)
+Meshpars <- list(cutoff=0.08, max.edge=c(1, 3), offset=c(1,1))
+Mesh <- MakeSpatialRegion(data=NULL, bdry=norway.poly, meshpars=Meshpars,
+                          proj = Projection)
+source("../R/Model_visualization_functions.R")
+
+```
+## Comparing different models
+
+```{r}
+res <- readRDS("../R/output/cv_output_4mods.RDS")
+
+dic_values <- matrix(unlist(res), ncol = 5)
+av_dic <- rowMeans(dic_values)
+```
+(please ignore the actual numbers, I do not trust them)
+
++--------------------+------------------+--------------------+
+|                    | 1 spatial field  | 2 spatial fields   |
++====================+==================+====================+
+|**Env. covariates** | `r av_dic[1]`           `r av_dic[2]`|
+|                    |                                      |
++--------------------+------------------+--------------------+
+| **Env. + effort**  | `r av_dic[3]`           `r av_dic[4]`|
+| **covariates**     |                                      |
++--------------------+------------------+--------------------+
+
+Above: Result of block cross-validation, comparing four different models. The numbers are the marginal deviance for each model.
+
+## Looking at final model
+
+```{r}
+model_final <- readRDS("../R/output/model_final_1.RDS")
+
+summary(model_final$model)
+```
+We can plot the predictions (not shown) as well as the spatial field means and standard deviations:
+```{r}
+spat_fields_df <- proj_random_field(model_final$model, sp_polygon = norway.poly, mesh = Mesh$mesh)
+
+ggplot(spat_fields_df) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color="white", fill = "white") +
+    geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = mean)) +
+  scale_fill_fish(option = "Salmo_trutta") +
+  empty_theme_map +
+  facet_wrap(~ field)
+
+ggplot(spat_fields_df) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color="white", fill = "white") +
+    geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = sd)) +
+  scale_fill_fish(option = "Salmo_trutta") +
+  empty_theme_map +
+  facet_wrap(~ field)
+```
+
+
+
+

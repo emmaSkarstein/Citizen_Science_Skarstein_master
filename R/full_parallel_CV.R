@@ -38,7 +38,7 @@ artsobs_traintest <- TrainTest(sb, trout_artsobs, sb$k)
 
 
 # Setting up parallel backend
-cl <- parallel::makeForkCluster(detectCores())
+cl <- parallel::makeForkCluster(5)
 parallel <- TRUE
 if(parallel){
   doParallel::registerDoParallel(cl)
@@ -58,18 +58,18 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   # (note: strictly speaking intergation and prediction stack could have been made 
   #  outside the loop, but don't thing they matter so much)
   stks <- MakeStacks(data_structured = survey_train, data_unstructured = artsobs_train,
-                     covariates = Covariates, Mesh = Mesh)
+                     env_covariates = env_covariates, all_covariates = Covariates, Mesh = Mesh)
 
   stk.survey <- stks$survey
   stk.artsobs <- stks$artsobs
   stk.ip <- stks$ip
   stk.pred <- stks$pred
   
-  stk.test <- MakeTestStack(survey_test, Covariates, Mesh)
+  stk.test <- MakeTestStack(survey_test, env_covariates, Mesh)
   
   # CONSTRUCT FORMULAS 
-  Use <- c("decimalLongitude","decimalLatitude", "log_area", "perimeter_m", 
-           "eurolst_bio10", "SCI")
+  Use <- c("decimalLongitude","decimalLatitude", "log_area", "log_perimeter", 
+           "log_catchment", "eurolst_bio10", "SCI")
   Use_CS <- c(Use, "distance_to_road", "HFP")
   
   formula1 <- MakeFormula(cov_names = Use, second_sp_field = FALSE)
@@ -103,15 +103,14 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
 
 parallel::stopCluster(cl)
 
-saveRDS(modelList, "cv_output_4mods.RDS")
+saveRDS(modelList, "R/output/cv_output_4modse0.RDS")
 
-modelList
-res <- readRDS("cv_output_4mods.RDS")
+res <- readRDS("R/output/cv_output_4modse0.RDS")
 
-mod1_res <- res[[1]]$dic1
+dic_values <- matrix(unlist(res), ncol = 5)
+rowMeans(dic_values)
 
-test <- as.matrix(sapply(res, '['))
-rowMeans(test)
+# From this we see that model 4 is the best one (closely followed by model 2).
+# We run the full model on all the data.
 
-test <- matrix(unlist(res), ncol = 5)
-rowm <- rowMeans(test)
+

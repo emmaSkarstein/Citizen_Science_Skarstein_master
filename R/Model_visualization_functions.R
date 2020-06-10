@@ -74,3 +74,31 @@ plot_obs <- function(dataset){
   return(p)
 }
 
+proj_random_field <- function(model, sp_polygon, mesh){
+  Projection <- CRS("+proj=longlat +ellps=WGS84")
+  
+  r0 <- diff(range(bbox(sp_polygon)[1,]))/diff(range(bbox(sp_polygon)[2,]))
+  prj <- inla.mesh.projector(mesh, 
+                             xlim=bbox(sp_polygon)[1,],
+                             ylim=bbox(sp_polygon)[2,],
+                             dims=c(200*r0, 200))
+  
+  m.bias <- inla.mesh.project(prj, model$summary.ran$bias_field$mean)
+  sd.bias <- inla.mesh.project(prj, model$summary.ran$bias_field$sd)
+  m.shared <- inla.mesh.project(prj, model$summary.ran$shared_field$mean)
+  sd.shared <- inla.mesh.project(prj, model$summary.ran$shared_field$sd)
+  proj.points <- SpatialPoints(prj$lattice$loc)
+  proj4string(proj.points) <- Projection 
+  proj4string(norway.poly) <- Projection
+  ov <- sp::over(proj.points, sp_polygon)
+  sd.bias[is.na(ov)] <- m.bias[is.na(ov)] <- NA
+  sd.shared[is.na(ov)] <- m.shared[is.na(ov)] <- NA
+  
+  spat_coords <- expand.grid(x = prj$x, y = prj$y)
+  bias_df <- data.frame(decimalLongitude = spat_coords$x, decimalLatitude = spat_coords$y,
+                        mean = as.vector(m.bias), sd = as.vector(sd.bias))
+  shared_df <- data.frame(decimalLongitude = spat_coords$x, decimalLatitude = spat_coords$y,
+                          mean = as.vector(m.shared), sd = as.vector(sd.shared))
+  drop_na(bind_rows(bias = bias_df, shared = shared_df, .id = "field"))
+}
+

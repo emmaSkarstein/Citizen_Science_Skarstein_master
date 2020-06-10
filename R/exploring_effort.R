@@ -108,6 +108,6 @@ saveRDS(model4_area, "R/output/model_area.RDS")
 #saveRDS(model4_default, "R/output/model_default.RDS")
 saveRDS(stk.pred, "R/output/stkpred.RDS")
 
-
-
-
+model_0$model$dic$dic
+model_1$model$dic$dic
+model_area$model$dic$dic

@@ -102,3 +102,20 @@ proj_random_field <- function(model, sp_polygon, mesh){
   drop_na(bind_rows(bias = bias_df, shared = shared_df, .id = "field"))
 }
 
+
+dots_whiskers_inla <- function(model){
+  num_rows <- nrow(model$model$summary.fixed)
+  coefs <- model$model$summary.fixed[3:num_rows, 1:2]
+  coefs$coefficient <- rownames(coefs)
+  
+  #var_labs <- c("Latitude", "Longitude", "Log area", "Perimeter", "Distance to road", "Temperature", "SCI", "HFP")
+  p <- ggplot(coefs, aes(x = mean, y = coefficient)) +
+    geom_vline(xintercept = 0, linetype = "dotted", size = 1, col = "orchid4", alpha = 0.6) +
+    geom_segment(aes(x = mean-sd, xend = mean+sd, y = coefficient, yend = coefficient)) +
+    geom_point(shape = 21, size = 4, fill = "darkgoldenrod2") +
+    #scale_y_discrete(labels = var_labs) +
+    theme_minimal() +
+    theme(axis.title = element_blank())
+  
+  return(p)
+}

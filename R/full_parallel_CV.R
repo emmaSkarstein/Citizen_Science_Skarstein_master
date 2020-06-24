@@ -68,14 +68,17 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   stk.test <- MakeTestStack(survey_test, env_covariates, Mesh)
   
   # CONSTRUCT FORMULAS 
-  Use <- c("decimalLongitude","decimalLatitude", "log_area", "log_perimeter", 
+  Use <- c("decimalLongitude","decimalLatitude", "log_area", 
            "log_catchment", "eurolst_bio10", "SCI")
   Use_CS <- c(Use, "distance_to_road", "HFP")
   
-  formula1 <- MakeFormula(cov_names = Use, second_sp_field = FALSE)
-  formula2 <- MakeFormula(cov_names = Use, second_sp_field = TRUE)
-  formula3 <- MakeFormula(cov_names = Use_CS, second_sp_field = FALSE)
-  formula4 <- MakeFormula(cov_names = Use_CS, second_sp_field = TRUE)
+  overdisp <- FALSE
+  
+  formula1 <- MakeFormula(cov_names = Use, second_sp_field = FALSE, overdispersion = overdisp)
+  formula2 <- MakeFormula(cov_names = Use, second_sp_field = TRUE, overdispersion = overdisp)
+  formula3 <- MakeFormula(cov_names = Use_CS, second_sp_field = FALSE, overdispersion = overdisp)
+  formula4 <- MakeFormula(cov_names = Use_CS, second_sp_field = TRUE, overdispersion = overdisp)
+  formula0 <- MakeFormulaSingleDataset(cov_names = Use, second_sp_field = FALSE, overdispersion = overdisp)
   
   # FIT MODELS
   model1 <- FitModelTest(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
@@ -90,22 +93,31 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   model4 <- FitModelTest(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
                         Formula = formula4, mesh = Mesh$mesh, predictions = TRUE)
   
+  model0 <- FitModelTest(stk.survey, stk.ip, stk.pred$stk, stk.test,
+                         Formula = formula0, mesh = Mesh$mesh, predictions = TRUE)
+  
   # CALCULATE DIC
   resp <- survey_test$occurrenceStatus
   mod_res1 <- CalcLinPred(model1, resp)
   mod_res2 <- CalcLinPred(model2, resp)
   mod_res3 <- CalcLinPred(model3, resp)
   mod_res4 <- CalcLinPred(model4, resp)
+  mod_res0 <- CalcLinPred(model0, resp)
   
   
-  list(dic1 = mod_res1$deviance, dic2 = mod_res2$deviance, dic3 = mod_res3$deviance, dic4 = mod_res4$deviance)
+  list(dic0 = mod_res0$deviance,    
+       dic1 = mod_res1$deviance, 
+       dic2 = mod_res2$deviance, 
+       dic3 = mod_res3$deviance, 
+       dic4 = mod_res4$deviance)
 }
 
 parallel::stopCluster(cl)
 
-saveRDS(modelList, "R/output/cv_output_4modse0.RDS")
+saveRDS(modelList, "R/output/cv_output_4mods_ov_F.RDS")
 
 res <- readRDS("R/output/cv_output_4modse0.RDS")
+res1 <- readRDS("R/output/cv_output_4mods_ov_F.RDS")
 
 dic_values <- matrix(unlist(res), ncol = 5)
 rowMeans(dic_values)

@@ -1,17 +1,17 @@
 
 library(ggplot2)
 library(sf) # for sf objects
+library(sp)
 library(plyr)
 library(dplyr) # for smoother dataframe-manipulation
 library(ggmap) # also for nice maps
 library(maps)
-library(RColorBrewer)
+#library(RColorBrewer)
 library(PointedSDMs)
-library(sp)
 library(spatstat)
 library(maptools)
 library(INLA)
-library(reshape2)
+#library(reshape2)
 library(rgeos)
 library(fields)
 library(viridis)

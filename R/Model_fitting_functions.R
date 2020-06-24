@@ -177,6 +177,22 @@ MakeFormula <- function(cov_names, second_sp_field = FALSE, overdispersion = FAL
   formula1
 }
 
+MakeFormulaSingleDataset <- function(cov_names, second_sp_field = FALSE, overdispersion = FALSE){
+  intercepts <- "int.survey - 1"
+  env_effects <- paste(cov_names, collapse = ' + ')
+  random_effects <- "f(shared_field, model = Mesh$spde)"
+  
+  if(second_sp_field){
+    random_effects <- paste(random_effects, "+ f(bias_field, model = Mesh$spde)")
+  }
+  if(overdispersion){
+    random_effects <- paste(random_effects, "+ f(id.iid, model = 'iid')")
+  }
+  
+  formula1 <- as.formula(paste(c("resp ~ 0 ", intercepts, env_effects, random_effects), collapse = " + "))
+  formula1
+}
+
 
 MakeModel <- function(stk_list, formula, Mesh){
   NorwegianModel <- FitModel(stk_list$ip, stk_list$artsobs, 
@@ -217,7 +233,7 @@ FitModelTest <- function(..., Formula, CovNames=NULL, mesh, spat.ind = "i", pred
   
   #mesh <- inla.spde2.matern(mesh)
   mesh <- INLA::inla.spde2.pcmatern(mesh,
-                              prior.range = c(2, 0.9), prior.sigma = c(1, 0.1))
+                              prior.range = c(2, 0.5), prior.sigma = c(1, 0.1))
   
   if(!is.null(spat.ind)) {
     CovNames <- c(CovNames, paste0("f(", spat.ind, ", model=mesh)"))

@@ -42,7 +42,7 @@ plot_obs <- function(dataset){
 
 
 
-model_final <- readRDS("R/output/model_final_1.RDS")
+model_final <- readRDS("R/output/model_final_overdisp.RDS")
 
 
 
@@ -93,3 +93,22 @@ plot(norway.poly, add=TRUE)
 image.plot(x=prj$x, y=prj$y, z=sd.spat, asp=1,
            xlab='', ylab='', axes=FALSE, horizontal=TRUE)
 plot(norway.poly, add=TRUE)
+
+cor.test(covariateData$eurolst_bio10, covariateData$decimalLatitude)
+
+coefs <- model_final$model$summary.fixed[3:10,1:2]
+coefs$coefficient <- rownames(coefs)
+
+var_labs <- c("Latitude", "Longitude", "Log area", "Perimeter", "Distance to road", "Temperature", "SCI", "HFP")
+ggplot(coefs, aes(x = mean, y = coefficient)) +
+  geom_vline(xintercept = 0, linetype = "dotted", size = 1, col = "orchid4", alpha = 0.6) +
+  geom_segment(aes(x = mean-sd, xend = mean+sd, y = coefficient, yend = coefficient)) +
+  geom_point(shape = 21, size = 4, fill = "darkgoldenrod2") +
+  #scale_y_discrete(labels = var_labs) +
+  theme_minimal() +
+  theme(axis.title = element_blank())
+
+ggsave("figs/coefficient_plot.png")  
+  
+  
+

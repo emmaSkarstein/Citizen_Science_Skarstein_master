@@ -3,7 +3,7 @@
 
 
 # LIBRARIES
-library(ggplot)
+library(ggplot2)
 library(sf)
 library(sp)
 library(ggpubr)
@@ -21,16 +21,14 @@ library(viridis)
 
 
 # DATA AND MODELS ----
-trout_artsobs <- readRDS("R/output/trout_artsobs.RDS")
-trout_survey <- readRDS("R/output/trout_survey.RDS")
-trout_artsobs_df <- readRDS("R/output/trout_artsobs_df.RDS")
-trout_survey_df <- readRDS("R/output/trout_survey_df.RDS")
 mod <- readRDS("R/output/model_final.RDS")
+mod <- readRDS("R/output/model_final_overdisp.RDS")
 dev_list <- readRDS("R/output/cv_output_4modse0.RDS")
 
+source("R/Model_visualization_functions.R")
+source("R/loading_map_obs_covs.R")
 
 # VISUALIZE DATA ----
-col_pal <- c('#fff7fb','#ece2f0','#d0d1e6','#a6bddb','#67a9cf','#3690c0','#02818a','#016450')
 
 empty_theme_map <- theme(                              
   plot.background = element_blank(), 
@@ -76,7 +74,7 @@ survey_hex <- ggplot(data.frame(trout_survey), aes(x = decimalLongitude, y = dec
 
 ggarrange(artsobs_hex, survey_hex)
 
-ggsave("figs/hex_point_maps.pdf", width = 8, height = 4)
+ggsave("figs/hex_point_maps.png", width = 8, height = 4)
 
 
 #--------------
@@ -99,10 +97,10 @@ survey_hex <- ggplot(data.frame(trout_survey), aes(x = decimalLongitude, y = dec
   ggtitle("Fish status survey of nordic lakes")
 
 ggarrange(artsobs_hex, survey_hex)
-ggsave("figs/hex_maps.pdf", width = 12, height = 6)
+ggsave("figs/hex_maps.png", width = 12, height = 6)
 
 artsobs_hex
-ggsave("figs/artsobs_hex.pdf", width = 6, height = 6)
+ggsave("figs/artsobs_hex.png", width = 6, height = 6)
 
 # MODEL RESULTS ----
 dev_list %>% unlist() %>% matrix(ncol = 5) %>% rowMeans()
@@ -130,8 +128,33 @@ ggplot(spat_fields) +
   theme_bw() +
   theme(axis.title = element_blank()) 
 
-ggsave("figs/spatial_fields.pdf")
+ggsave("figs/spatial_fields.png", width = 6, height = 5.3)
 
 summary(mod$model)
+
+# Prediction
+pred_df <- data.frame(stk.pred$predcoords, prediction = mod$predictions) %>% 
+  gather(key = statistic, value = value, prediction.mean:prediction.stddev)
+ggplot(pred_df) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color='gray93', fill = 'gray93') +
+  coord_quickmap() + 
+  geom_raster(aes(x = X, y = Y, fill = value)) +
+  scale_fill_viridis(option = "inferno", direction = -1)  +
+  facet_grid(~statistic) +
+  theme_bw() +
+  theme(axis.title = element_blank()) +
+  ggtitle("Prediction")
+
+ggplot(filter(pred_df, statistic == "prediction.mean")) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color='gray93', fill = 'gray93') +
+  coord_quickmap() + 
+  geom_raster(aes(x = X, y = Y, fill = value)) +
+  scale_fill_viridis(option = "inferno", direction = -1)  +
+  theme_bw() +
+  theme(axis.title = element_blank()) +
+  ggtitle("Prediction")
+
 
 

@@ -1,6 +1,5 @@
 
 
-
 PlotMeanStddev <- function(pred){
   ncolors <- 200
   greencols.fn <- colorRampPalette(brewer.pal(9, "Greens"))
@@ -99,8 +98,25 @@ proj_random_field <- function(model, sp_polygon, mesh){
                         mean = as.vector(m.bias), sd = as.vector(sd.bias))
   shared_df <- data.frame(decimalLongitude = spat_coords$x, decimalLatitude = spat_coords$y,
                           mean = as.vector(m.shared), sd = as.vector(sd.shared))
-  drop_na(bind_rows(bias = bias_df, shared = shared_df, .id = "field"))
+  tidyr::drop_na(bind_rows(bias = bias_df, shared = shared_df, .id = "field"))
 }
+
+make_random_field_df <- function(Model, sp_polygon, mesh){
+  spat_fields_df <- proj_random_field(Model$model, sp_polygon = sp_polygon, 
+                                      mesh = mesh)
+  spat_fields <- spat_fields_df %>% tidyr::gather(key = statistic, value = value, mean:sd)
+  return(spat_fields)
+}
+
+prediction_df <- function(stk.pred, model){
+  pred_df <- data.frame(decimalLongitude = stk.pred$predcoords[,1], 
+                        decimalLatitude = stk.pred$predcoords[,2],
+                        model$predictions)
+  #pred_df$precision <- pred_df$stddev^-2
+  Pred <- pred_df %>% tidyr::gather(key = statistic, value = value, mean:stddev)
+  return(Pred)
+}
+  
 
 
 dots_whiskers_inla <- function(model){
@@ -110,9 +126,10 @@ dots_whiskers_inla <- function(model){
   
   #var_labs <- c("Latitude", "Longitude", "Log area", "Perimeter", "Distance to road", "Temperature", "SCI", "HFP")
   p <- ggplot(coefs, aes(x = mean, y = coefficient)) +
-    geom_vline(xintercept = 0, linetype = "dotted", size = 1, col = "orchid4", alpha = 0.6) +
-    geom_segment(aes(x = mean-sd, xend = mean+sd, y = coefficient, yend = coefficient)) +
-    geom_point(shape = 21, size = 4, fill = "darkgoldenrod2") +
+    geom_vline(xintercept = 0, linetype = "dotted", size = 0.8, color = "grey") +
+    geom_segment(aes(x = mean-1.96*sd, xend = mean+1.96*sd, y = coefficient, yend = coefficient), 
+                 size = 0.8) +
+    geom_point(shape = 21, size = 4, fill = "orange") +
     #scale_y_discrete(labels = var_labs) +
     theme_minimal() +
     theme(axis.title = element_blank())

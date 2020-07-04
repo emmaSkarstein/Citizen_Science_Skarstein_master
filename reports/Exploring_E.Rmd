@@ -13,10 +13,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, message = FALSE, warning = FALSE}
 library(sf)
 library(sp)
+library(ggplot2)
 ```
 
 First just loading the stuff we need:
 ```{r}
+source("../R/Model_visualization_functions.R")
 model_0 <- readRDS("../R/output/model_0.RDS")
 model_1 <- readRDS("../R/output/model_1.RDS")
 model_area <- readRDS("../R/output/model_area.RDS")
@@ -84,4 +86,13 @@ summary(model_1$model)
 summary(model_area$model)
 
 ```
+
+Notice how the longitude and latitude are more significant in the non-zero-E models!
+
+```{r}
+dots_whiskers_inla(model_0)
+dots_whiskers_inla(model_1)
+dots_whiskers_inla(model_area)
+```
+
 

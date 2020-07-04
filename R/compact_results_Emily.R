@@ -46,6 +46,7 @@ empty_theme_map <- theme(
 norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
 norway <- dplyr::setdiff(norway, filter(norway, subregion == "Jan Mayen"))
 
+# POINTS ON HEX MAP ----
 artsobs_hex <- ggplot(data.frame(trout_artsobs), aes(x = decimalLongitude, y = decimalLatitude)) +
   geom_polygon(data = norway, aes(long, lat, group = group), 
                color='gray93', fill = 'gray93') +
@@ -76,6 +77,27 @@ ggarrange(artsobs_hex, survey_hex)
 
 ggsave("figs/hex_point_maps.png", width = 8, height = 4)
 
+
+# POINTS ONLY, MINIMAL FOR SCHEMATIC REPRESENTATION ----
+
+ggplot(data.frame(trout_artsobs), aes(x = decimalLongitude, y = decimalLatitude)) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color='black', fill = 'grey93') + coord_quickmap() +
+  geom_point(aes(x = decimalLongitude, y = decimalLatitude), 
+             alpha = 0.8, size = 1) +
+  theme_bw() +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
+ggsave("minimal_points_artsobs.png")
+
+ggplot(data.frame(trout_survey), aes(x = decimalLongitude, y = decimalLatitude)) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color='black', fill = 'gray93') + coord_quickmap() +
+  geom_point(aes(x = decimalLongitude, y = decimalLatitude, 
+                 color = occurrenceStatus), alpha = 0.8, show.legend = FALSE) +
+  scale_color_manual(values=c("red", "black"), name = "", labels = c("Absence", "Presence")) +
+  theme_bw() +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank()) 
+ggsave("minimal_points_survey.png")
 
 #--------------
 artsobs_hex <- ggplot(data.frame(trout_artsobs), aes(x = decimalLongitude, y = decimalLatitude)) +

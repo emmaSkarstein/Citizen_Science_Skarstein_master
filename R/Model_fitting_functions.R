@@ -37,7 +37,7 @@ library(spatialEco)
 
 
 MakeStacks <- function(data_structured, data_unstructured, env_covariates, all_covariates, Mesh){
-
+  
   norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
   norway <- setdiff(norway, filter(norway, subregion == "Jan Mayen"))
   Projection <- CRS("+proj=longlat +ellps=WGS84")
@@ -67,13 +67,13 @@ MakeStacks <- function(data_structured, data_unstructured, env_covariates, all_c
   }
   
   stk.survey <- inla.stack(data=list(resp = cbind(NA, data_structured@data[,"occurrenceStatus"] ), 
-                                    Ntrials = data_structured@data[,"Ntrials"]), 
-                          A = list(1, projmat.str), 
-                          tag = "survey",
-                          effects = list(NearestCovs_str@data, 
-                                         list(shared_field = 1:Mesh$mesh$n,
-                                              id.iid = 1:Mesh$mesh$n)))
-
+                                     Ntrials = data_structured@data[,"Ntrials"]), 
+                           A = list(1, projmat.str), 
+                           tag = "survey",
+                           effects = list(NearestCovs_str@data, 
+                                          list(i = 1:Mesh$mesh$n,
+                                               id.iid = 1:Mesh$mesh$n)))
+  
   
   
   # ARTSOBS, UNSTRUCTURED STACK -----------------------------------------
@@ -86,8 +86,8 @@ MakeStacks <- function(data_structured, data_unstructured, env_covariates, all_c
   
   stk.artsobs <- inla.stack(data = list(resp = cbind(rep(1,nrow(NearestCovs_unstr)), NA),
                                         e = rep(0, nrow(NearestCovs_unstr))), # why is this zero?
-                                        #e = rep(1, nrow(NearestCovs_unstr))),
-                                        #e = exp(rep(NearestCovs_unstr@data$log_area))),
+                            #e = rep(1, nrow(NearestCovs_unstr))),
+                            #e = exp(rep(NearestCovs_unstr@data$log_area))),
                             A = list(1, projmat.artsobs), 
                             tag = "artsobs",
                             effects = list(NearestCovs_unstr@data, 
@@ -122,17 +122,17 @@ MakeStructuredStack <- function(data_structured, covariates, Mesh){
   }
   
   stk.survey <- INLA::inla.stack(data=list(resp = cbind(NA, data_structured@data[,"occurrenceStatus"] ), 
-                                     Ntrials = data_structured@data[,"Ntrials"]), 
-                           A = list(1, projmat.str), 
-                           tag = "survey",
-                           effects = list(NearestCovs_str@data, 
-                                          list(shared_field = 1:Mesh$mesh$n,
-                                               id.iid = 1:Mesh$mesh$n)))
+                                           Ntrials = data_structured@data[,"Ntrials"]), 
+                                 A = list(1, projmat.str), 
+                                 tag = "survey",
+                                 effects = list(NearestCovs_str@data, 
+                                                list(i = 1:Mesh$mesh$n,
+                                                     id.iid = 1:Mesh$mesh$n)))
   stk.survey
 }
 
 MakeTestStack <- function(data_test, covariates, Mesh){
-
+  
   data_test@data <- dplyr::mutate(data_test@data, NACol = rep(NA)) 
   data_test@data <- dplyr::mutate(data_test@data, zeroCol = rep(0))
   
@@ -150,12 +150,12 @@ MakeTestStack <- function(data_test, covariates, Mesh){
   }
   
   stk.survey <- INLA::inla.stack(data=list(resp = cbind(NA, data_test@data[,"NACol"] ), 
-                                     Ntrials = data_test@data[,"zeroCol"]), 
-                           A = list(1, projmat.str), 
-                           tag = "test",
-                           effects = list(NearestCovs_str@data, 
-                                          list(shared_field = 1:Mesh$mesh$n,
-                                               id.iid = 1:Mesh$mesh$n)))
+                                           Ntrials = data_test@data[,"zeroCol"]), 
+                                 A = list(1, projmat.str), 
+                                 tag = "test",
+                                 effects = list(NearestCovs_str@data, 
+                                                list(shared_field = 1:Mesh$mesh$n,
+                                                     id.iid = 1:Mesh$mesh$n)))
   stk.survey
 }
 
@@ -164,10 +164,10 @@ MakeTestStack <- function(data_test, covariates, Mesh){
 MakeFormula <- function(cov_names, second_sp_field = FALSE, overdispersion = FALSE){
   intercepts <- "int.survey + int.artsobs - 1"
   env_effects <- paste(cov_names, collapse = ' + ')
-  random_effects <- "f(shared_field, model = Mesh$spde)"
+  random_effects <- "f(shared_field, model = mesh.shared) + f(i, copy = 'shared_field')"
   
   if(second_sp_field){
-    random_effects <- paste(random_effects, "+ f(bias_field, model = Mesh$spde)")
+    random_effects <- paste(random_effects, "+ f(bias_field, model = mesh.bias)")
   }
   if(overdispersion){
     random_effects <- paste(random_effects, "+ f(id.iid, model = 'iid')")
@@ -180,10 +180,10 @@ MakeFormula <- function(cov_names, second_sp_field = FALSE, overdispersion = FAL
 MakeFormulaSingleDataset <- function(cov_names, second_sp_field = FALSE, overdispersion = FALSE){
   intercepts <- "int.survey - 1"
   env_effects <- paste(cov_names, collapse = ' + ')
-  random_effects <- "f(shared_field, model = Mesh$spde)"
+  random_effects <- "f(shared_field, model = mesh.shared) + f(i, copy = 'shared_field')"
   
   if(second_sp_field){
-    random_effects <- paste(random_effects, "+ f(bias_field, model = Mesh$spde)")
+    random_effects <- paste(random_effects, "+ f(bias_field, model = mesh.bias)")
   }
   if(overdispersion){
     random_effects <- paste(random_effects, "+ f(id.iid, model = 'iid')")
@@ -218,10 +218,43 @@ MakePred <- function(stk.pred, model){
   return(Pred)
 }
 
-######## FitModelTest     #########
+######## FitModel variations #########
+FitModelCustom <- function(..., Formula, mesh){
+  
+  stck <- inla.stack(...)
+  
+  #mesh <- inla.spde2.matern(Mesh$mesh)
+  mesh.shared <- INLA::inla.spde2.pcmatern(mesh,
+                                           prior.range = c(20, 0.1),
+                                           prior.sigma = c(0.1, 0.01))
+  mesh.bias <- INLA::inla.spde2.pcmatern(mesh,
+                                         prior.range = c(20, 0.1),
+                                         prior.sigma = c(0.1, 0.01))
+  
+  # Fit model including predictions
+  mod <- inla(Formula, family=c('poisson','binomial'),
+              control.family = list(list(link = "log"), list(link = "cloglog")),
+              data=inla.stack.data(stck), verbose=FALSE,
+              control.results=list(return.marginals.random=FALSE,
+                                   return.marginals.predictor=FALSE),
+              control.predictor=list(A=inla.stack.A(stck), link=NULL, compute=TRUE),
+              control.fixed = list(mean=0),
+              Ntrials=inla.stack.data(stck)$Ntrials, E=inla.stack.data(stck)$e,
+              control.compute=list(waic=FALSE, dic=FALSE))
+  
+  # For predictions
+  id <- inla.stack.index(stck, "pred")$data
+  pred <- data.frame(mean=mod$summary.fitted.values$mean[id],
+                     stddev=mod$summary.fitted.values$sd[id])
+  
+  return(list(model = mod, predictions = pred))
+}
+
+
 FitModelTest <- function(..., Formula, CovNames=NULL, mesh, spat.ind = "i", predictions=FALSE, tag.pred="pred",
                          control.fixed=NULL, waic=FALSE, dic=TRUE, offset.formula=NULL, verbose = FALSE) {
   stck <- INLA::inla.stack(...)
+  
   if(is.null(CovNames)) {
     CovNames <- unlist(stck$effects$names)
     CovNames <- CovNames[!CovNames%in%c(spat.ind)]
@@ -231,9 +264,14 @@ FitModelTest <- function(..., Formula, CovNames=NULL, mesh, spat.ind = "i", pred
     }
   }
   
-  #mesh <- inla.spde2.matern(mesh)
+  #mesh <- inla.spde2.matern(mesh) # mesh1
+  #mesh <- INLA::inla.spde2.pcmatern(mesh) # Don't think this is a good idea
+  #mesh <- INLA::inla.spde2.pcmatern(mesh, # 
+  #                             prior.range = c(2, 0.5), 
+  #                             prior.sigma = c(1, 0.1))
   mesh <- INLA::inla.spde2.pcmatern(mesh,
-                              prior.range = c(2, 0.5), prior.sigma = c(1, 0.1))
+                              prior.range = c(1000, 0.1),
+                              prior.sigma = c(0.1, 0.01))
   
   if(!is.null(spat.ind)) {
     CovNames <- c(CovNames, paste0("f(", spat.ind, ", model=mesh)"))
@@ -250,20 +288,20 @@ FitModelTest <- function(..., Formula, CovNames=NULL, mesh, spat.ind = "i", pred
   #Formula <- update(Formula, paste0(" ~ . + offset(",offset.formula, ")"))
   # Formula <- formula("resp ~ 0")
   mod <- INLA::inla(Formula, family=c('poisson','binomial'),
-              control.family = list(list(link = "log"), list(link = "cloglog")),
-              data=INLA::inla.stack.data(stck), verbose=verbose,
-              control.results=list(return.marginals.random=FALSE,
-                                   return.marginals.predictor=FALSE),
-              control.predictor=list(A=INLA::inla.stack.A(stck), link=NULL, compute=TRUE),
-              control.fixed=control.fixed,
-              E=INLA::inla.stack.data(stck)$e, Ntrials=INLA::inla.stack.data(stck)$Ntrials,
-              offset = offset.formula,
-              control.compute=list(waic=waic, dic=dic))
+                    control.family = list(list(link = "log"), list(link = "cloglog")),
+                    data=INLA::inla.stack.data(stck), verbose=verbose,
+                    control.results=list(return.marginals.random=FALSE,
+                                         return.marginals.predictor=FALSE),
+                    control.predictor=list(A=INLA::inla.stack.A(stck), link=NULL, compute=TRUE), #Consider using link = link?
+                    control.fixed=control.fixed,
+                    E=INLA::inla.stack.data(stck)$e, Ntrials=INLA::inla.stack.data(stck)$Ntrials,
+                    offset = offset.formula,
+                    control.compute=list(waic=waic, dic=dic))
   
   if(predictions) {
     id <- INLA::inla.stack.index(stck,tag.pred)$data
-    pred <- data.frame(mean=mod$summary.fitted.values$mean[id],
-                       stddev=mod$summary.fitted.values$sd[id])
+    pred <- data.frame(mean = mod$summary.fitted.values$mean[id],
+                       stddev = mod$summary.fitted.values$sd[id])
     res <- list(model=mod, predictions=pred)
   } else {
     res <- mod

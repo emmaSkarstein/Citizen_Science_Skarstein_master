@@ -81,20 +81,20 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   formula0 <- MakeFormulaSingleDataset(cov_names = Use, second_sp_field = FALSE, overdispersion = overdisp)
   
   # FIT MODELS
-  model1 <- FitModelTest(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
-                         Formula = formula1, mesh = Mesh$mesh, predictions = TRUE)
+  model1 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
+                         Formula = formula1, mesh = Mesh$mesh)
 
-  model2 <- FitModelTest(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
-                         Formula = formula2, mesh = Mesh$mesh, predictions = TRUE)
+  model2 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
+                         Formula = formula2, mesh = Mesh$mesh)
 
-  model3 <- FitModelTest(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
-                         Formula = formula3, mesh = Mesh$mesh, predictions = TRUE)
+  model3 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
+                         Formula = formula3, mesh = Mesh$mesh)
 
-  model4 <- FitModelTest(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
-                        Formula = formula4, mesh = Mesh$mesh, predictions = TRUE)
+  model4 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
+                        Formula = formula4, mesh = Mesh$mesh)
   
-  model0 <- FitModelTest(stk.survey, stk.ip, stk.pred$stk, stk.test,
-                         Formula = formula0, mesh = Mesh$mesh, predictions = TRUE)
+  model0 <- FitModelCustom(stk.survey, stk.ip, stk.pred$stk, stk.test,
+                         Formula = formula0, mesh = Mesh$mesh)
   
   # CALCULATE DIC
   resp <- survey_test$occurrenceStatus
@@ -114,10 +114,9 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
 
 parallel::stopCluster(cl)
 
-saveRDS(modelList, "R/output/cv_output_4mods_ov_F.RDS")
+saveRDS(modelList, "R/output/cv_output_4mods.RDS")
 
-res <- readRDS("R/output/cv_output_4modse0.RDS")
-res1 <- readRDS("R/output/cv_output_4mods_ov_F.RDS")
+res <- readRDS("R/output/cv_output_4mods.RDS")
 
 dic_values <- matrix(unlist(res), ncol = 5)
 rowMeans(dic_values)

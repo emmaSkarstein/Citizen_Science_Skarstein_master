@@ -20,7 +20,7 @@ library(viridis)
 # MAP ---------------------------------------------------------------
 # This is always the same
 norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
-norway <- setdiff(norway, filter(norway, subregion == "Jan Mayen"))
+norway <- dplyr::setdiff(norway, filter(norway, subregion == "Jan Mayen"))
 Projection <- CRS("+proj=longlat +ellps=WGS84")
 norwayfill <- map("world", "norway", fill=TRUE, plot=FALSE, 
                   ylim=c(58,72), xlim=c(4,32))
@@ -103,6 +103,7 @@ pike_artsobs <- MakeSpDF(pike_artsobs_df)
 Meshpars <- list(cutoff=0.08, max.edge=c(1, 3), offset=c(1,1))
 Mesh <- MakeSpatialRegion(data=NULL, bdry=norway.poly, meshpars=Meshpars,
                           proj = Projection)
+
 
 
 

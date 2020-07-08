@@ -154,7 +154,7 @@ MakeTestStack <- function(data_test, covariates, Mesh){
                                  A = list(1, projmat.str), 
                                  tag = "test",
                                  effects = list(NearestCovs_str@data, 
-                                                list(i = 1:Mesh$mesh$n,
+                                                list(shared_field = 1:Mesh$mesh$n,
                                                      id.iid = 1:Mesh$mesh$n)))
   stk.survey
 }

@@ -22,7 +22,6 @@ library(viridis)
 
 # DATA AND MODELS ----
 mod <- readRDS("R/output/model_final.RDS")
-mod <- readRDS("R/output/model_final_overdisp.RDS")
 dev_list <- readRDS("R/output/cv_output_4modse0.RDS")
 
 source("R/Model_visualization_functions.R")
@@ -73,8 +72,7 @@ survey_hex <- ggplot(data.frame(trout_survey), aes(x = decimalLongitude, y = dec
   theme(axis.title = element_blank()) +
   ggtitle("Fish status survey of nordic lakes")
 
-ggarrange(artsobs_hex, survey_hex)
-
+survey_hex + artsobs_hex
 ggsave("figs/hex_point_maps.png", width = 8, height = 4)
 
 
@@ -102,7 +100,7 @@ ggsave("minimal_points_survey.png")
 #--------------
 artsobs_hex <- ggplot(data.frame(trout_artsobs), aes(x = decimalLongitude, y = decimalLatitude)) +
   geom_polygon(data = norway, aes(long, lat, group = group), 
-               color='gray93', fill = 'gray93') +
+               color='gray93', fill = 'gray93') + coord_quickmap() +
   geom_hex() +
   scale_fill_viridis(option = "magma", direction = -1) +
   theme_minimal() +
@@ -111,15 +109,15 @@ artsobs_hex <- ggplot(data.frame(trout_artsobs), aes(x = decimalLongitude, y = d
 
 survey_hex <- ggplot(data.frame(trout_survey), aes(x = decimalLongitude, y = decimalLatitude)) +
   geom_polygon(data = norway, aes(long, lat, group = group), 
-               color='gray93', fill = 'gray93') +
+               color='gray93', fill = 'gray93') + coord_quickmap() +
   geom_hex() +
   scale_fill_viridis(option = "magma", direction = -1) +
   theme_minimal() +
   theme(axis.title = element_blank()) +
   ggtitle("Fish status survey of nordic lakes")
 
-ggarrange(artsobs_hex, survey_hex)
-ggsave("figs/hex_maps.png", width = 12, height = 6)
+survey_hex + artsobs_hex
+ggsave("figs/hex_maps.pdf", width = 12, height = 6)
 
 artsobs_hex
 ggsave("figs/artsobs_hex.png", width = 6, height = 6)

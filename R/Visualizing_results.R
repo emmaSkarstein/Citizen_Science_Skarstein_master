@@ -2,7 +2,9 @@
 
 library(ggpubr)
 library(colorspace)
-
+library(patchwork)
+library(raster)
+library(blockCV)
 
 # Loading covariates and observations
 source("R/loading_map_obs_covs.R")
@@ -14,10 +16,10 @@ source("R/Model_visualization_functions.R")
 res_cv <- readRDS("R/output/cv_output_4mods_ov_F.RDS")
 
 # Setting fish species
-fish_sp <- "trout"
+fish_sp <- "perch"
 
 # From "full_model.R":
-model_trout <- readRDS(paste0("R/output/model_", fish_sp, ".RDS"))
+model_final <- readRDS(paste0("R/output/model_", fish_sp, ".RDS"))
 
 # Prediction stack:
 stk.pred <- readRDS("R/output/stkpred.RDS")
@@ -26,13 +28,28 @@ if(fish_sp == "trout"){
   full_name <- "Brown trout"
 }else if(fish_sp == "perch"){
   full_name <- "European perch"
-}else if(fish_sp == "pike"){
+}else if(fish_sp == "char"){
   full_name <- "Arctic char"
 }else{
   full_name <- "European pike"
 }
 
 #----------------------------------------------------------------------------
+
+# CROSS VALIDATION FOLDS
+validation_raster <- brick(SpatialPixelsDataFrame(points=stk.pred$predcoords, data=data.frame(rep(1, 6005)), proj4string=Projection))
+k <- 5
+sb <- spatialBlock(speciesData = trout_survey, # sf or SpatialPoints
+                   species = "occurrenceStatus", # the response column (binomial or multi-class)
+                   rasterLayer = validation_raster, # a raster for background (optional)
+                   theRange = 150000, # size of the blocks in meters
+                   k = k, # number of folds
+                   selection = "random",
+                   iteration = 100, # find evenly dispersed folds
+                   biomod2Format = FALSE)
+sb$plots + scale_fill_continuous_sequential(palette = "Teal")
+
+ggsave("figs/cv_folds.pdf", width = 5)
 
 
 
@@ -56,25 +73,43 @@ names(statistic.labs) <- c("mean", "sd")
 field.labs <- c("Second spatial field (PO data only)", "First spatial field (both data sets)")  
 names(field.labs) <- c("bias", "shared")
 
-ggplot(spat_fields) +
+shared_p <- ggplot(spat_fields %>% filter(field == "shared")) +
   geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = value)) +
-  scale_fill_viridis(option = "inferno", direction = -1) +
-  facet_grid(rows = vars(statistic), cols = vars(field),
+  #scale_fill_viridis(option = "magma", direction = -1) +
+  scale_fill_continuous_sequential(palette = "BuPu")  +
+  facet_grid(rows = vars(statistic),
              labeller = labeller(field = field.labs, statistic = statistic.labs)) +
   geom_polygon(data = norway, aes(long, lat, group = group), 
                color="black", fill = NA) + coord_quickmap() + 
   theme_bw() +
-  theme(axis.title = element_blank()) 
+  theme(axis.title = element_blank(), legend.position = "left",
+        strip.background = element_blank(), strip.text.y = element_blank(),
+        legend.title = element_blank()) +
+  ggtitle("First spatial field", subtitle = "Shared for both data sets") 
 
-ggsave(paste0("figs/spatial_fields_", fish_sp, ".pdf"), width = 6, height = 5.3)
+bias_p <- ggplot(spat_fields%>% filter(field == "bias")) +
+  geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = value)) +
+  #scale_fill_viridis(option = "viridis", direction = -1) +
+  scale_fill_continuous_sequential(palette = "GnBu")  +
+  facet_grid(rows = vars(statistic),
+             labeller = labeller(field = field.labs, statistic = statistic.labs)) +
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color="black", fill = NA) + coord_quickmap() + 
+  theme_bw() +
+  theme(axis.title = element_blank(), axis.ticks.y = element_blank(), 
+        axis.text.y = element_blank(), legend.title = element_blank()) + 
+  ggtitle("Second spatial field", subtitle = "Citizen science data only")
+
+shared_p + bias_p
+
+ggsave(paste0("figs/spatial_fields_", fish_sp, ".pdf"), width = 6.6, height = 5.7)
 
 
 
 
 # DOTS AND WHISKERS PLOTS ----
-dots_whiskers_inla(model_final)
-ggsave(paste0("figs/coefficient_plot_", fish_sp, ".pdf")) 
-
+dots_whiskers_inla(model_final) + ggtitle(paste0(full_name, ": Estimated coefficients"))
+ggsave(paste0("figs/coefficient_plot_", fish_sp, ".pdf"), height = 2.5, width = 5) 
 
 
 
@@ -87,7 +122,9 @@ limit_sd <- max(abs(Pred_sd$value)) * c(0, 1)
 
 p_mean <- ggplot(Pred_mean) +
   geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = value)) +
-  scale_fill_continuous_diverging(palette = "Purple-Green", limit = limit_mean)  +
+  #scale_fill_gradientn(colours = c("darkorange2", "white", "darkorchid4")) + 
+  #scale_fill_continuous_diverging(palette = "Purple-Green", limit = limit_mean)  +
+  scale_fill_continuous_sequential(palette = "PuBuGn")  +
   geom_polygon(data = norway, aes(long, lat, group = group), 
                color='black', fill = NA) + coord_quickmap() +
   ggtitle(label = "Mean") +
@@ -96,18 +133,18 @@ p_mean <- ggplot(Pred_mean) +
 
 p_sd <- ggplot(Pred_sd) +
   geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = value)) +
-  scale_fill_continuous_diverging(palette = "Purple-Green", limit = limit_sd)  +
+  #scale_fill_continuous_diverging(palette = "Purple-Green", limit = limit_sd)  +
+  #scale_fill_gradientn(colours = c("white", "darkorchid4")) + 
+  scale_fill_continuous_sequential(palette = "Reds 3")  +
   geom_polygon(data = norway, aes(long, lat, group = group), 
                color='black', fill = NA) + coord_quickmap() + 
   ggtitle(label = "Standard deviation") +
   labs(fill = element_blank()) +
   theme_bw() + theme(axis.title = element_blank(), plot.title = element_text(hjust = 0.5))
 
-p_post <- ggarrange(p_mean, p_sd)
-annotate_figure(p_post, top = text_grob(paste0(full_name, ": Predicted posterior log intensity"), 
-                                        size = 14))
+p_mean + p_sd
 
-ggsave(paste0("figs/posterior_predictions_", fish_sp, ".pdf"))
+ggsave(paste0("figs/posterior_predictions_", fish_sp, ".pdf"), height = 4, width = 7)
 
 # Plotting intensity instead of log intensity (but what do we do with sd then?)
 
@@ -139,16 +176,6 @@ bias <- dplyr::bind_rows(theta1 = as.data.frame(model_final$model$marginals.hype
                                theta2 = as.data.frame(model_final$model$marginals.hyperpar[[4]]),
                                .id = "theta")
 hyperpars <- dplyr::bind_rows(shared_field = shared, bias_field = bias, .id = "field")
-
-ggplot(hyperpars) + 
-  geom_line(aes(x = x, y = y, color = theta), lwd = 0.9) +
-  ylab (expression(paste(pi, "(", theta, " | ", bold(y), ")"))) +
-  facet_wrap(~field, nrow = 1) +
-  scale_color_manual(values = c("magenta4", "orange")) +
-  geom_vline(xintercept = 0, size = 0.9, linetype = "dotted", color = "grey") +
-  theme_bw() + theme(aspect.ratio=1)
-ggsave(paste0("figs/posterior_marginals_", fish_sp, ".pdf")) 
-
 
 theta1_shared <- ggplot(hyperpars %>% filter(theta == "theta1", field == "shared_field")) + 
   geom_line(aes(x = x, y = y), color = "magenta4", lwd = 0.9) +

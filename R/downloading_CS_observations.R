@@ -1,9 +1,9 @@
 ##-------------------------------------------------------------------------------
 # Downloading fish from Artsobservasjoner and Artobservasjoner
 ##-------------------------------------------------------------------------------
-library(here)
 
-source('R/download_lakefish_dataset.R')
+
+source('R/Download_lakefish_functions.R')
 fish_names <- readRDS('fish_names.rds')
 
 #setwd(paste0(getwd(), "/Norwegian_Species_Observation_Service"))

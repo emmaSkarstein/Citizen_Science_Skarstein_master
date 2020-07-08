@@ -12,10 +12,10 @@ source("R/Model_fitting_functions.R")
 source("R/Model_visualization_functions.R")
 
 # Setting fish species
-#fish_sp <- "trout"
+fish_sp <- "trout"
 #fish_sp <- "perch"
 #fish_sp <- "char"
-fish_sp <- "pike"
+#fish_sp <- "pike"
 
 if(fish_sp == "trout"){
   lat_name <- "Salmo trutta"
@@ -56,10 +56,11 @@ formula2
 
 message("Fitting model... \n")
 model_final <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk,
-                            Formula = formula2, mesh = Mesh$mesh)
+                            Formula = formula2, mesh = Mesh$mesh, 
+                            prior.range = c(100, 0.05))
 
 
-saveRDS(model_final, paste0("R/output/model_", fish_sp, ".RDS"))
+saveRDS(model_final, paste0("R/output/model_", fish_sp, "_100range.RDS"))
 
 message("Done and model saved!")
 

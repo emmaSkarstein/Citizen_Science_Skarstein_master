@@ -121,13 +121,13 @@ prediction_df <- function(stk.pred, model){
 
 dots_whiskers_inla <- function(model){
   num_rows <- nrow(model$model$summary.fixed)
-  coefs <- model$model$summary.fixed[3:num_rows, 1:2]
+  coefs <- model$model$summary.fixed[3:num_rows, 1:5]
   coefs$coefficient <- rownames(coefs)
-  
-  #var_labs <- c("Latitude", "Longitude", "Log area", "Perimeter", "Distance to road", "Temperature", "SCI", "HFP")
+  colnames(coefs) <- c("mean", "sd", "quant0.025", "quant0.5", "quant0.975", "coefficient")
+
   p <- ggplot(coefs, aes(x = mean, y = coefficient)) +
     geom_vline(xintercept = 0, linetype = "dotted", size = 0.8, color = "grey") +
-    geom_segment(aes(x = mean-1.96*sd, xend = mean+1.96*sd, y = coefficient, yend = coefficient), 
+    geom_segment(aes(x = quant0.025, xend = quant0.975, y = coefficient, yend = coefficient), 
                  size = 0.8) +
     geom_point(shape = 21, size = 4, fill = "orange") +
     #scale_y_discrete(labels = var_labs) +

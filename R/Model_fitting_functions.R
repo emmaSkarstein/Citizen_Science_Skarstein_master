@@ -154,7 +154,7 @@ MakeTestStack <- function(data_test, covariates, Mesh){
                                  A = list(1, projmat.str), 
                                  tag = "test",
                                  effects = list(NearestCovs_str@data, 
-                                                list(shared_field = 1:Mesh$mesh$n,
+                                                list(i = 1:Mesh$mesh$n,
                                                      id.iid = 1:Mesh$mesh$n)))
   stk.survey
 }
@@ -194,18 +194,18 @@ MakeFormulaSingleDataset <- function(cov_names, second_sp_field = FALSE, overdis
 }
 
 
-MakeModel <- function(stk_list, formula, Mesh){
-  NorwegianModel <- FitModel(stk_list$ip, stk_list$artsobs, 
-                             stk_list$survey, stk_list$pred$stk,
-                             formula = formula,
-                             mesh = Mesh$mesh,
-                             predictions = TRUE,
-                             dic = TRUE,
-                             spat.ind = NULL) # About this: I've included the spatial fields in the formula, so this should be fine, 
-  # but it may be possible to remove this and remove two of the fields in the formula?
-  
-  return(NorwegianModel)
-}
+# MakeModel <- function(stk_list, formula, Mesh){
+#   NorwegianModel <- FitModel(stk_list$ip, stk_list$artsobs, 
+#                              stk_list$survey, stk_list$pred$stk,
+#                              formula = formula,
+#                              mesh = Mesh$mesh,
+#                              predictions = TRUE,
+#                              dic = TRUE,
+#                              spat.ind = NULL) # About this: I've included the spatial fields in the formula, so this should be fine, 
+#   # but it may be possible to remove this and remove two of the fields in the formula?
+#   
+#   return(NorwegianModel)
+# }
 
 MakePred <- function(stk.pred, model){
   Projection <- CRS("+proj=longlat +ellps=WGS84")
@@ -219,17 +219,17 @@ MakePred <- function(stk.pred, model){
 }
 
 ######## FitModel variations #########
-FitModelCustom <- function(..., Formula, mesh){
+FitModelCustom <- function(..., Formula, mesh, prior.range = c(2, 0.1), prior.sigma = c(0.1, 0.01)){
   
   stck <- inla.stack(...)
   
   #mesh <- inla.spde2.matern(Mesh$mesh)
   mesh.shared <- INLA::inla.spde2.pcmatern(mesh,
-                                           prior.range = c(20, 0.1),
-                                           prior.sigma = c(0.1, 0.01))
+                                           prior.range = prior.range,
+                                           prior.sigma = c(0.01, 0.01))
   mesh.bias <- INLA::inla.spde2.pcmatern(mesh,
-                                         prior.range = c(20, 0.1),
-                                         prior.sigma = c(0.1, 0.01))
+                                         prior.range = prior.range,
+                                         prior.sigma = prior.sigma)
   
   # Fit model including predictions
   mod <- inla(Formula, family=c('poisson','binomial'),

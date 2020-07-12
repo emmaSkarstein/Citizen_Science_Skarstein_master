@@ -79,7 +79,7 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   formula3 <- MakeFormula(cov_names = Use_CS, second_sp_field = FALSE, overdispersion = overdisp)
   formula4 <- MakeFormula(cov_names = Use_CS, second_sp_field = TRUE, overdispersion = overdisp)
   formula0 <- MakeFormulaSingleDataset(cov_names = Use, second_sp_field = FALSE, overdispersion = overdisp)
-  formula5 <- MakeFormula(cov_names = NULL, second_sp_field = FALSE, overdispersion = overdisp)
+  formula5 <- MakeFormula(cov_names = NULL, second_sp_field = TRUE, overdispersion = overdisp)
   
   # FIT MODELS
   model1 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
@@ -92,13 +92,13 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
                          Formula = formula3, mesh = Mesh$mesh)
 
   model4 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
-                        Formula = formula4, mesh = Mesh$mesh)
+                         Formula = formula4, mesh = Mesh$mesh)
   
   model0 <- FitModelCustom(stk.survey, stk.ip, stk.pred$stk, stk.test,
                          Formula = formula0, mesh = Mesh$mesh)
   
-  model5 <- FitModelCustom(stk.survey, stk.ip, stk.pred$stk, stk.test,
-                           Formula = formula5, mesh = Mesh$mesh)
+  # model5 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
+  #                        Formula = formula5, mesh = Mesh$mesh)
   
   # CALCULATE DIC
   resp <- survey_test$occurrenceStatus
@@ -107,27 +107,24 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   mod_res3 <- CalcLinPred(model3, resp)
   mod_res4 <- CalcLinPred(model4, resp)
   mod_res0 <- CalcLinPred(model0, resp)
-  mod_res5 <- CalcLinPred(model0, resp)
+  #mod_res5 <- CalcLinPred(model5, resp)
   
   
   list(dic0 = mod_res0$deviance,    
        dic1 = mod_res1$deviance, 
        dic2 = mod_res2$deviance, 
        dic3 = mod_res3$deviance, 
-       dic4 = mod_res4$deviance,
-       dic5 = mod_res5$deviance)
+       dic4 = mod_res4$deviance)
 }
 
 parallel::stopCluster(cl)
 
 saveRDS(modelList, "R/output/cv_output_4mods.RDS")
 
-res <- readRDS("R/output/cv_output_4mods.RDS")
+#res <- readRDS("R/output/cv_output_4mods.RDS")
 
-dic_values <- matrix(unlist(res), ncol = 6)
-rowMeans(dic_values)
+#dic_values <- matrix(unlist(res), ncol = 6)
+#rowMeans(dic_values)
 
-# From this we see that model 4 is the best one (closely followed by model 2).
-# We run the full model on all the data.
 
 

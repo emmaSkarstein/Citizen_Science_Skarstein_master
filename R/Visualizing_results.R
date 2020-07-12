@@ -13,13 +13,14 @@ source("R/loading_map_obs_covs.R")
 source("R/Model_visualization_functions.R")
 
 # From "full_paralell_CV.R":
-res_cv <- readRDS("R/output/cv_output_4mods_ov_F.RDS")
+res_cv <- readRDS("R/output/cv_output_4mods.RDS")
 
 # Setting fish species
-fish_sp <- "perch"
+fish_sp <- "trout"
 
 # From "full_model.R":
 model_final <- readRDS(paste0("R/output/model_", fish_sp, ".RDS"))
+#model_final <- readRDS(paste0("R/output/model_", fish_sp, "_100range.RDS"))
 
 # Prediction stack:
 stk.pred <- readRDS("R/output/stkpred.RDS")
@@ -55,9 +56,14 @@ ggsave("figs/cv_folds.pdf", width = 5)
 
 
 # OUTPUT FROM CROSS VALIDATION ----
-res_cv %>% unlist() %>% matrix(ncol = 5) %>% rowMeans()
+res_matrix <- res_cv %>% unlist() %>% matrix(ncol = 5)
+row.names(res_matrix) <- c("dev0", "dev1", "dev2", "dev3", "dev4")
+res_matrix
+rowMeans(res_matrix)
 
-
+# Results when using six models
+#    dev0     dev1     dev2     dev3     dev4     dev5 
+#89.63066 12.98962 12.92028 13.00012 12.93050 12.91507
 
 
 # RANDOM FIELDS ----
@@ -85,7 +91,7 @@ shared_p <- ggplot(spat_fields %>% filter(field == "shared")) +
   theme(axis.title = element_blank(), legend.position = "left",
         strip.background = element_blank(), strip.text.y = element_blank(),
         legend.title = element_blank()) +
-  ggtitle("First spatial field", subtitle = "Shared for both data sets") 
+  ggtitle(expression(paste("First spatial field, ", xi[1]))) 
 
 bias_p <- ggplot(spat_fields%>% filter(field == "bias")) +
   geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = value)) +
@@ -98,7 +104,7 @@ bias_p <- ggplot(spat_fields%>% filter(field == "bias")) +
   theme_bw() +
   theme(axis.title = element_blank(), axis.ticks.y = element_blank(), 
         axis.text.y = element_blank(), legend.title = element_blank()) + 
-  ggtitle("Second spatial field", subtitle = "Citizen science data only")
+  ggtitle(expression(paste("Effort field, ", xi[2])))
 
 shared_p + bias_p
 
@@ -108,7 +114,14 @@ ggsave(paste0("figs/spatial_fields_", fish_sp, ".pdf"), width = 6.6, height = 5.
 
 
 # DOTS AND WHISKERS PLOTS ----
-dots_whiskers_inla(model_final) + ggtitle(paste0(full_name, ": Estimated coefficients"))
+Use <- c("decimalLongitude","decimalLatitude", "log_area", 
+         "log_catchment", "eurolst_bio10", "SCI")
+cov.labs <- c("Longitude", "Latitude", "Log area", "Log catchment", 
+              "Temperature", "Shoreline complexity index")
+
+dots_whiskers_inla(model_final) + scale_y_discrete(labels = cov.labs) +
+  ggtitle(paste0(full_name))
+
 ggsave(paste0("figs/coefficient_plot_", fish_sp, ".pdf"), height = 2.5, width = 5) 
 
 
@@ -157,10 +170,10 @@ ggplot(Pred_mean) +
   theme_bw() + theme(axis.title = element_blank()) +
   ggtitle("Predicted posterior intensity (mean)")
 
-# Plotting only mean with viridis
+# Plotting only mean 
 ggplot(Pred_mean) +
   geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = value), show.legend = FALSE) +
-  scale_fill_viridis(option = "inferno", direction = -1) +
+  scale_fill_continuous_sequential(palette = "PuBuGn")  +
   geom_polygon(data = norway, aes(long, lat, group = group), 
                color='black', fill = NA) + coord_quickmap() +
   labs(fill = element_blank()) + 
@@ -169,42 +182,45 @@ ggplot(Pred_mean) +
 ggsave("figs/minimal_prediction.png")
 
 # POSTERIOR MARGINAL ----
-shared <- dplyr::bind_rows(theta1 = as.data.frame(model_final$model$marginals.hyperpar[[1]]),
-                                 theta2 = as.data.frame(model_final$model$marginals.hyperpar[[2]]),
-                                .id = "theta")
-bias <- dplyr::bind_rows(theta1 = as.data.frame(model_final$model$marginals.hyperpar[[3]]),
-                               theta2 = as.data.frame(model_final$model$marginals.hyperpar[[4]]),
-                               .id = "theta")
+shared <- dplyr::bind_rows(Range = as.data.frame(model_final$model$marginals.hyperpar[[1]]),
+                           Stdev = as.data.frame(model_final$model$marginals.hyperpar[[2]]),
+                                .id = "hyperpar")
+bias <- dplyr::bind_rows(Range = as.data.frame(model_final$model$marginals.hyperpar[[3]]),
+                         Stdev = as.data.frame(model_final$model$marginals.hyperpar[[4]]),
+                               .id = "hyperpar")
 hyperpars <- dplyr::bind_rows(shared_field = shared, bias_field = bias, .id = "field")
 
-theta1_shared <- ggplot(hyperpars %>% filter(theta == "theta1", field == "shared_field")) + 
+range_shared <- ggplot(hyperpars %>% filter(hyperpar == "Range", field == "shared_field")) + 
   geom_line(aes(x = x, y = y), color = "magenta4", lwd = 0.9) +
-  ylab (expression(paste(pi, "(", theta, " | ", bold(y), ")"))) +
-  ggtitle(expression(paste(theta[1]^{}, " - shared field"))) +
+  ylab (expression(paste(pi, "(", rho, " | ", bold(y), ")"))) +
+  ggtitle(expression(paste(rho, " - shared field"))) +
   theme_bw() + theme(aspect.ratio=1, legend.position = "none", axis.title.x = element_blank())
 
-theta2_shared <- ggplot(hyperpars %>% filter(theta == "theta2", field == "shared_field")) + 
+sigma_shared <- ggplot(hyperpars %>% filter(hyperpar == "Stdev", field == "shared_field")) + 
   geom_line(aes(x = x, y = y), color = "orange", lwd = 0.9) +
   ylab ("") +
-  ggtitle(expression(paste(theta[2]^{}, " - shared field"))) +
+  ggtitle(expression(paste(sigma, " - shared field"))) +
   theme_bw() + theme(aspect.ratio=1, legend.position = "none", axis.title.x = element_blank())
 
-theta1_bias <- ggplot(hyperpars %>% filter(theta == "theta1", field == "bias_field")) + 
+range_bias <- ggplot(hyperpars %>% filter(hyperpar == "Range", field == "bias_field")) + 
   geom_line(aes(x = x, y = y), color = "magenta4", lwd = 0.9) +
   ylab ("") +
-  ggtitle(expression(paste(theta[1]^{}, " - bias field"))) +
+  ggtitle(expression(paste(rho, " - bias field"))) +
   theme_bw() + theme(aspect.ratio=1, legend.position = "none", axis.title.x = element_blank())
 
-theta2_bias <- ggplot(hyperpars %>% filter(theta == "theta2", field == "bias_field")) + 
+sigma_bias <- ggplot(hyperpars %>% filter(hyperpar == "Stdev", field == "bias_field")) + 
   geom_line(aes(x = x, y = y), color = "orange", lwd = 0.9) +
   ylab ("") +
-  ggtitle(expression(paste(theta[2]^{}, " - bias field"))) +
+  ggtitle(expression(paste(sigma, " - bias field"))) +
   theme_bw() + theme(aspect.ratio=1, legend.position = "none", axis.title.x = element_blank())
 
 
-(theta1_shared | theta2_shared | theta1_bias | theta2_bias) +
+(range_shared | range_bias) / (sigma_shared | sigma_bias) +
   plot_annotation(title = paste0(full_name, ": hyperparameters")) &
   theme(plot.title = element_text(hjust = 0.5, size = 14))
 
 ggsave(paste0("figs/thetas_", fish_sp, ".pdf"))
+
+
+summary(model_final$model)
 

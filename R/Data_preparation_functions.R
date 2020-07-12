@@ -23,7 +23,7 @@ merge_occ_event <- function(file_path, file_type, sep = "\t", quote = "\"'"){
 
 
 
-
+# Note that the match-to-lake function was originally written by Anders G. Finstad.
 
 #' Match to lake
 #' 

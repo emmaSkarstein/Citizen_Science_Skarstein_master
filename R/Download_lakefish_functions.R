@@ -8,6 +8,7 @@ library(rstudioapi)   # for writing in user info
 library(rio)          # a swiss army knife for data I/O
 library(here)         # for knowing where we are
 
+# Note that the download functions were originally written by Anders G. Finstad.
 
 #' Download GBIF API
 #' 

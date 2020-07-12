@@ -39,8 +39,8 @@ covariateData <- covariateData %>%
   mutate(log_area = log(area_km2), 
          log_perimeter = log(perimeter_m), 
          log_catchment = log(catchment_area_km2)) %>% 
-  select(-c(ebint, no_vatn_lnr, eb_waterregionID))
-env_covariateData <- covariateData %>% select(-c(distance_to_road, HFP))
+  dplyr::select(-c(ebint, no_vatn_lnr, eb_waterregionID))
+env_covariateData <- covariateData %>% dplyr::select(-c(distance_to_road, HFP))
 
 
 Covariates <- SpatialPointsDataFrame(coords = covariateData[,c("decimalLongitude","decimalLatitude")],
@@ -100,10 +100,11 @@ pike_artsobs <- MakeSpDF(pike_artsobs_df)
 
 
 # MESH --------------------------------------------------------------
-Meshpars <- list(cutoff=0.08, max.edge=c(1, 3), offset=c(1,1))
+Meshpars <- list(cutoff=0.08, max.edge=c(0.6, 3), offset=c(1,1))
+#Meshpars <- list(cutoff=0.08, max.edge=c(1, 3), offset=c(1,1))
+
 Mesh <- MakeSpatialRegion(data=NULL, bdry=norway.poly, meshpars=Meshpars,
                           proj = Projection)
-
 
 
 

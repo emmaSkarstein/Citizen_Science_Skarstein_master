@@ -15,6 +15,8 @@ library(maptools)
 library(PointedSDMs)
 
 library(patchwork)
+library(inlabru)
+library(colorspace)
 
 source("R/Model_visualization_functions.R")
 source("R/loading_map_obs_covs.R")
@@ -35,42 +37,27 @@ if(fish_sp == "trout"){
   lat_name <- "Esox lucius"
 }
 
+
+norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
+norway <- dplyr::setdiff(norway, filter(norway, subregion == "Jan Mayen"))
+
 # Showing mesh
-pdf("figs/meshplot.pdf")
-plot(Mesh$mesh)
-dev.off()
+ggplot() + 
+  geom_polygon(data = norway, aes(long, lat, group = group), 
+               color=NA, fill = NA) + coord_quickmap() + 
+  gg(Mesh$mesh, int.color = "darkorange2", edge.color = "gray20") +
+  theme_bw() +
+  theme(axis.title = element_blank())
+
+
+ggsave("figs/meshplot.pdf")
+
+
 
 # Looking at the observations
 
-# Empty map theme
-empty_theme_map <- theme(                              
-  plot.background = element_blank(), 
-  panel.grid.major = element_blank(), 
-  panel.grid.minor = element_blank(), 
-  panel.border = element_blank(), 
-  panel.background = element_blank(),
-  axis.line = element_blank(),
-  axis.ticks = element_blank(),
-  axis.title.x = element_blank(), 
-  axis.title.y = element_blank(),
-  axis.text = element_blank()
-)
-empty_theme <- theme(                              
-  plot.background = element_blank(), 
-  panel.grid.major = element_blank(), 
-  panel.grid.minor = element_blank(), 
-  panel.border = element_blank(), 
-  panel.background = element_blank(),
-  axis.text.x = element_blank(),
-  axis.title.x = element_blank()
-)
-
-
-
-
 ## Observation map
-norway <- ggplot2::map_data("world", region = "Norway(?!:Svalbard)")
-norway <- dplyr::setdiff(norway, filter(norway, subregion == "Jan Mayen"))
+
 
 p2 <- ggplot(data.frame(trout_artsobs)) +
   geom_polygon(data = norway, aes(long, lat, group = group), 
@@ -157,15 +144,17 @@ ggsave("figs/points_all_sp.pdf", height = 4, width = 10)
 
 
 ## Number of observations per year
-time_counts <- count(trout_artsobs_df, year)
+top_four <- Data_artsobs_df %>% filter(species %in% c("Perca fluviatilis", "Salmo trutta", "Salvelinus alpinus", "Esox lucius"))
+time_counts <- dplyr::count(top_four, year, species)
 
-ggplot(time_counts, aes(x = year, y = n)) + 
-  geom_line(size = 1, color = "orange") +
+ggplot(time_counts, aes(x = year, y = n, fill = species)) + 
+  geom_bar(stat = "identity", position = position_stack(reverse = FALSE)) +
   theme_bw() +
   theme(axis.title = element_blank()) +
-  geom_vline(xintercept = 1996, linetype = "dotted", color = "grey", size = 1)
+  scale_fill_viridis_d() + 
+  geom_vline(xintercept = 1996, linetype = "dashed", color = "black", size = 1)
 
-ggsave("figs/timeline.pdf", height = 2)
+ggsave("figs/timeline.pdf", height = 2, width = 7)
 
 
 
@@ -185,27 +174,35 @@ plot_exp_var <- function(var){
     geom_point(aes(x = decimalLongitude, y = decimalLatitude, color = value),
                alpha = 0.8, size = 0.2) +
     scale_color_continuous_sequential(palette = "OrRd") +
-    facet_grid(cols = vars(variable)) +
+    facet_grid(cols = vars(variable), labeller = labeller(variable = cov.labs)) +
     theme_bw() +
-    theme(axis.title = element_blank(), legend.title = element_blank())
+    theme(axis.title = element_blank(), legend.title = element_blank(),
+          strip.text.x = element_text(size = 14))
 }
+
 Cov_names <- unique(Cov_long$variable)
 Use_p <- c("log_area", "log_catchment", "eurolst_bio10", "SCI", "log_perimeter",
            "distance_to_road", "HFP")
 Use_interesting <- c("eurolst_bio10", "distance_to_road", "HFP")
+
+cov.labs <- c("Log area", "Log catchment", "Temperature", 
+              "Shoreline complexity index", "Log perimeter", 
+              "Distance to road", "Human footprint index")
+names(cov.labs) <- Use_p
+
 var_plots <- lapply(Use_interesting, plot_exp_var)
 
-# ggarrange(plotlist = var_plots, ncol = 3)
-var_plots[[1]] + var_plots[[2]] + var_plots[[3]]
+(var_plots[[1]] + var_plots[[2]] + var_plots[[3]]) 
 
-ggsave("figs/covariates_on_map_interesting.pdf", height = 4, width = 10)
+
+#ggsave("figs/covariates_on_map_interesting.pdf", height = 4, width = 10)
 ggsave("figs/covariates_on_map_interesting.png", height = 4, width = 10)
 
 ## Explanatory variables histograms
 
 ggplot(Cov_long %>% filter(variable %in% Use_p), aes(x = value)) +
   geom_histogram(fill = "cyan4", color = "cyan4") +
-  facet_wrap(~variable, scales = 'free_x', nrow = 2) +
+  facet_wrap(~variable, scales = 'free_x', nrow = 2, labeller = labeller(variable = cov.labs)) +
   theme_bw() + 
   theme(axis.title = element_blank())
 

@@ -97,6 +97,7 @@ plot(Mesh$mesh)
 
 
 
+
 stk.ip <- MakeIntegrationStack(mesh=Mesh$mesh, data=Covariates, 
                                area=Mesh$w, tag='ip', InclCoords=TRUE)
 

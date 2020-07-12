@@ -174,6 +174,11 @@ MakeFormula <- function(cov_names, second_sp_field = FALSE, overdispersion = FAL
   }
   
   formula1 <- as.formula(paste(c("resp ~ 0 ", intercepts, env_effects, random_effects), collapse = " + "))
+  
+  if(is.null(cov_names)){
+    formula1 <- as.formula(paste(c("resp ~ 0 ", intercepts, random_effects), collapse = " + "))
+  }
+  
   formula1
 }
 
@@ -194,18 +199,6 @@ MakeFormulaSingleDataset <- function(cov_names, second_sp_field = FALSE, overdis
 }
 
 
-# MakeModel <- function(stk_list, formula, Mesh){
-#   NorwegianModel <- FitModel(stk_list$ip, stk_list$artsobs, 
-#                              stk_list$survey, stk_list$pred$stk,
-#                              formula = formula,
-#                              mesh = Mesh$mesh,
-#                              predictions = TRUE,
-#                              dic = TRUE,
-#                              spat.ind = NULL) # About this: I've included the spatial fields in the formula, so this should be fine, 
-#   # but it may be possible to remove this and remove two of the fields in the formula?
-#   
-#   return(NorwegianModel)
-# }
 
 MakePred <- function(stk.pred, model){
   Projection <- CRS("+proj=longlat +ellps=WGS84")
@@ -219,14 +212,17 @@ MakePred <- function(stk.pred, model){
 }
 
 ######## FitModel variations #########
-FitModelCustom <- function(..., Formula, mesh, prior.range = c(2, 0.1), prior.sigma = c(0.1, 0.01)){
+FitModelCustom <- function(..., Formula, mesh, prior.range = c(10, 0.1), 
+                           prior.sigma = c(0.1, 0.1)){
   
   stck <- inla.stack(...)
   
   #mesh <- inla.spde2.matern(Mesh$mesh)
   mesh.shared <- INLA::inla.spde2.pcmatern(mesh,
                                            prior.range = prior.range,
-                                           prior.sigma = c(0.01, 0.01))
+                                           #prior.sigma = c(0.5, 0.1)
+                                           prior.sigma = prior.sigma
+                                           )
   mesh.bias <- INLA::inla.spde2.pcmatern(mesh,
                                          prior.range = prior.range,
                                          prior.sigma = prior.sigma)
@@ -250,64 +246,6 @@ FitModelCustom <- function(..., Formula, mesh, prior.range = c(2, 0.1), prior.si
   return(list(model = mod, predictions = pred))
 }
 
-
-FitModelTest <- function(..., Formula, CovNames=NULL, mesh, spat.ind = "i", predictions=FALSE, tag.pred="pred",
-                         control.fixed=NULL, waic=FALSE, dic=TRUE, offset.formula=NULL, verbose = FALSE) {
-  stck <- INLA::inla.stack(...)
-  
-  if(is.null(CovNames)) {
-    CovNames <- unlist(stck$effects$names)
-    CovNames <- CovNames[!CovNames%in%c(spat.ind)]
-  } else {
-    if(!is.null(Formula)) {
-      warning("CovNames and formula are both not NULL: CovNames will be ignored")
-    }
-  }
-  
-  #mesh <- inla.spde2.matern(mesh) # mesh1
-  #mesh <- INLA::inla.spde2.pcmatern(mesh) # Don't think this is a good idea
-  #mesh <- INLA::inla.spde2.pcmatern(mesh, # 
-  #                             prior.range = c(2, 0.5), 
-  #                             prior.sigma = c(1, 0.1))
-  mesh <- INLA::inla.spde2.pcmatern(mesh,
-                              prior.range = c(1000, 0.1),
-                              prior.sigma = c(0.1, 0.01))
-  
-  if(!is.null(spat.ind)) {
-    CovNames <- c(CovNames, paste0("f(", spat.ind, ", model=mesh)"))
-  }
-  # I'm sure there's a nicer way of doing this, but ... won't work
-  if(is.null(control.fixed)) {
-    control.fixed <- list(mean=0)
-  }
-  
-  # Fit model including predictions
-  # if(!is.null(offset.formula)){
-  #   Formula <- update(Formula, paste0(" ~ . + offset(offset.formula)"))
-  # }
-  #Formula <- update(Formula, paste0(" ~ . + offset(",offset.formula, ")"))
-  # Formula <- formula("resp ~ 0")
-  mod <- INLA::inla(Formula, family=c('poisson','binomial'),
-                    control.family = list(list(link = "log"), list(link = "cloglog")),
-                    data=INLA::inla.stack.data(stck), verbose=verbose,
-                    control.results=list(return.marginals.random=FALSE,
-                                         return.marginals.predictor=FALSE),
-                    control.predictor=list(A=INLA::inla.stack.A(stck), link=NULL, compute=TRUE), #Consider using link = link?
-                    control.fixed=control.fixed,
-                    E=INLA::inla.stack.data(stck)$e, Ntrials=INLA::inla.stack.data(stck)$Ntrials,
-                    offset = offset.formula,
-                    control.compute=list(waic=waic, dic=dic))
-  
-  if(predictions) {
-    id <- INLA::inla.stack.index(stck,tag.pred)$data
-    pred <- data.frame(mean = mod$summary.fitted.values$mean[id],
-                       stddev = mod$summary.fitted.values$sd[id])
-    res <- list(model=mod, predictions=pred)
-  } else {
-    res <- mod
-  }
-  res
-}
 
 CalcLinPred <- function(Model, resp){
   glm(resp ~ 1 + offset(Model$model$summary.linear.predictor[inla.stack.index(stk.test,"test")$data,"mean"]))

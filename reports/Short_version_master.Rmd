@@ -1,5 +1,5 @@
 ---
-title: "Short version"
+title: "Short version of the master thesis of Emma Skarstein"
 author: "Emma Skarstein"
 date: "August 2020"
 output:

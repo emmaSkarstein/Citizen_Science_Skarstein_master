@@ -84,7 +84,6 @@ match_to_lake <- function(data, lake_polygons, max_dist_from_lake = 10){
 
 
 data_prep <- function(dirty_data, lakes, max_dist = 20){
-  source("R/match_to_lake.R")
   #-------------------------------------------------------------------------
   # Match to closest lake 
   #-------------------------------------------------------------------------

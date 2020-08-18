@@ -3,6 +3,7 @@
 #-------------------------------------------------------------------------------
 
 library(rgbif)        # for interacting with gbif
+library(rgeos)
 library(dplyr)        # for data-wrangling
 library(rstudioapi)   # for writing in user info
 library(rio)          # a swiss army knife for data I/O
@@ -76,7 +77,7 @@ download_lakefish_dataset <- function(latin_names, n_try = 10, file_marker = NA,
   # Find a taxonkey - get list of gbif keys to filter download
   if (is.na(key_tax)){
     for(i in 1:length(latin_names)){
-      key <- name_suggest(q = toString(latin_names[i]), rank = 'species')$key[1] 
+      key <- name_suggest(q = toString(latin_names[i]), rank = 'species')$data$key[1] 
       keys[i] = key
     }
   }
@@ -116,8 +117,8 @@ download_lakefish_dataset <- function(latin_names, n_try = 10, file_marker = NA,
   occ <- rio::import(unzip(paste0(temp,"/tmp.zip"), files = "occurrence.txt"))
   
   # Create "data"-folder if this doesn't exist
-  if (!dir.exists(here::here("data"))){ 
-    dir.create(here::here("data"))
+  if (!dir.exists(here::here("Nordic_Species_Observation_Services/data"))){ 
+    dir.create(here::here("Nordic_Species_Observation_Services/data"))
   }
   
   # Set the file-marker (string to be added to file-name) to keys if not given
@@ -134,7 +135,7 @@ download_lakefish_dataset <- function(latin_names, n_try = 10, file_marker = NA,
   
   
   # Write download key and citation to .rds files for reference (also available on https://www.gbif.org/user/download)
-  saveRDS(download_key,here::here("data", paste0("GBIF_download_key_", file_marker, ".rds")))
+  saveRDS(download_key,here::here("Nordic_Species_Observation_Services/data", paste0("GBIF_download_key_", file_marker, ".rds")))
   
   # CITE YOUR DATA!!! 
   citation <- paste0("GBIF Occurrence Download https://doi.org/", 

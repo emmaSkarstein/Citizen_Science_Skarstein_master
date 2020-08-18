@@ -8,4 +8,4 @@ Nordic_Species_Observation_Services/data/*
 Fish_status_survey_of_nordic_lakes/data/*
 
 # Ignore all .DS_Store files
-*/.DS_Store
+*.DS_Store

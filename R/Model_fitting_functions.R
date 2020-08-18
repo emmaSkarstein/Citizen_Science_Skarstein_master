@@ -214,7 +214,6 @@ MakePred <- function(stk.pred, model){
 ######## FitModel variations #########
 FitModelCustom <- function(..., Formula, mesh, prior.range = c(10, 0.1), 
                            prior.sigma = c(0.1, 0.1)){
-  
   stck <- inla.stack(...)
   
   #mesh <- inla.spde2.matern(Mesh$mesh)

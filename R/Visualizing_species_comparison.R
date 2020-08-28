@@ -100,7 +100,6 @@ names(species.labs) <- c("Trout", "Perch", "Char", "Pike")
 
 shared_all_sp <- ggplot(spat_fields %>% filter(statistic == "mean", field == "shared")) +
   geom_raster(aes(x = decimalLongitude, y = decimalLatitude, fill = value)) +
-  #scale_fill_viridis(option = "magma", direction = -1) +
   scale_fill_continuous_sequential(palette = "BuPu")  +
   facet_grid(rows = vars(species), 
              labeller = labeller(species = species.labs, field = field.labs)) +

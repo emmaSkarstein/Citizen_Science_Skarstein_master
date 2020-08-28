@@ -110,7 +110,7 @@ all_sp <- bind_rows(Trout = data.frame(trout_artsobs), Perch = data.frame(perch_
                     Char = data.frame(char_artsobs), Pike = data.frame(pike_artsobs), 
                     .id = "species")
 
-ggplot(all_sp, aes(x = decimalLongitude, y = decimalLatitude)) +
+all_hex <- ggplot(all_sp, aes(x = decimalLongitude, y = decimalLatitude)) +
   geom_polygon(data = norway, aes(long, lat, group = group), 
                color='gray80', fill = 'gray80') + coord_quickmap() +
   geom_hex() +
@@ -120,15 +120,16 @@ ggplot(all_sp, aes(x = decimalLongitude, y = decimalLatitude)) +
   theme_bw() +
   theme(axis.title = element_blank(), strip.text.x = element_text(size = 14)) 
 
+all_hex
 #ggsave("figs/hex_all_sp.pdf", width = 9, height = 3)
-ggsave("figs/hex_all_sp.pdf", height = 4, width = 10)
+ggsave("figs/hex_all_sp.png", height = 4, width = 10)
 
 # Point maps of survey all species
 all_sp_survey <- bind_rows(Trout = data.frame(trout_survey), Perch = data.frame(perch_survey), 
                            Char = data.frame(char_survey), Pike = data.frame(pike_survey), 
                            .id = "species")
 
-ggplot(all_sp_survey, aes(x = decimalLongitude, y = decimalLatitude)) +
+all_points <- ggplot(all_sp_survey, aes(x = decimalLongitude, y = decimalLatitude)) +
   geom_polygon(data = norway, aes(long, lat, group = group), 
                color="black", fill = "grey93") + coord_quickmap() +
   geom_point(aes(x = decimalLongitude, y = decimalLatitude, color = occurrenceStatus), 
@@ -139,9 +140,11 @@ ggplot(all_sp_survey, aes(x = decimalLongitude, y = decimalLatitude)) +
   theme_bw() +
   theme(axis.title = element_blank(), strip.text.x = element_text(size = 14), legend.title = element_blank()) 
 
-ggsave("figs/points_all_sp.pdf", height = 4, width = 10)
+all_points
+ggsave("figs/points_all_sp.png", height = 4, width = 10)
 
-
+all_hex / all_points
+ggsave("figs/points_hex_all_sp.png", height = 8, width = 12)
 
 ## Number of observations per year
 top_four <- Data_artsobs_df %>% filter(species %in% c("Perca fluviatilis", "Salmo trutta", "Salvelinus alpinus", "Esox lucius"))

@@ -1,6 +1,12 @@
 # Ignore lake polygon object (because it is huge)
 data/Norwegian_lakes.rds
 
+# Ignore covariates (because I don't know if I can share them)
+data/environmental_covariates.RDS
+
+# Ignore all saved output
+R/output/*
+
 # Ignore GBIF downloads
 Nordic_Species_Observation_Services/data/*
 

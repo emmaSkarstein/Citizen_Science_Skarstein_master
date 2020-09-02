@@ -8,7 +8,7 @@ data/environmental_covariates.RDS
 R/output/*
 
 # Ignore GBIF downloads
-Nordic_Species_Observation_Services/data/*
+# Nordic_Species_Observation_Services/data/*
 
 # Ignore Nordic presence/absence data
 Fish_status_survey_of_nordic_lakes/data/*

@@ -45,17 +45,23 @@ Note that this file only covers the final model of my thesis, a large part of th
 
 ## Downloading necessary data 
 
-- **Citizen science observations:** Run the file [downloading_CS_observations.R](https://github.com/emmaSkarstein/Citizen_Science_Skarstein_master/blob/master/R/downloading_CS_observations.R). This should download all observations of the four studied species from Artsobservasjoner from GBIF. Note that you will need to have an account on GBIF.org (but this is easy to make). The data will get saved in a "data" folder in the folder "Nordic_Species_Observation_Services".
+- **Citizen science observations:** Run the file [downloading_CS_observations.R](https://github.com/emmaSkarstein/Citizen_Science_Skarstein_master/blob/master/R/downloading_CS_observations.R). This should download all observations of the four studied species from Artsobservasjoner from GBIF. Note that you will need to have an account on GBIF.org (but this is easy to make). The data will get saved in a "data" folder in the folder "Nordic_Species_Observation_Services". There should be two files saved, "GBIF_download_kye_Norge.rds" and "GBIF_download_Norge.rds", where the latter contains our observations.
 
-- **Nordic presence absence:** Download the DwC-A-files from https://gbif.vm.ntnu.no/ipt/resource?r=fish_status_survey_of_nordic_lakes. Store this in a "data" folder in the folder "Fish_status_survey_of_nordic_lakes".
+- **Nordic presence absence:** Download the DwC-A-files from https://gbif.vm.ntnu.no/ipt/resource?r=fish_status_survey_of_nordic_lakes. Store this in a "data" folder in the folder "Fish_status_survey_of_nordic_lakes". There should be a few files here, the important ones for us ar "occurrence.txt" and "event.txt".
 
-- **Lake polygons for Norway:** Go to https://bird.unit.no/resources/9b27e8f0-55dd-442c-be73-26781dad94c8/content (click on "Innhold"-tab at the bottom of the page to download only selected sets of lakes). Place this in a "data" folder on the top level (the same level as the R-project).
+- **Lake polygons for Norway:** Go to https://bird.unit.no/resources/9b27e8f0-55dd-442c-be73-26781dad94c8/content (click on "Innhold"-tab at the bottom of the page to download only selected sets of lakes). Name the object name should be Norwegian_lakes.rds, and it should be placed in a "data" folder on the top level (the same level as the R-project).
 
 - **Environmental covariates:** I got these from Sam Perrin and I'm not sure where he got them and if I can share them here. Will update. Store these in the "data" folder together with the lake polygons, call it "environmental_covariates.RDS".
 
 
 ## Cleaning the data
-When all the data is downloaded and placed in the correct folders, the rest is easily done in R. Run the script [preparing_datasets.R](https://github.com/emmaSkarstein/Citizen_Science_Skarstein_master/blob/master/R/preparing_datasets.R) to prepare the data for analysis. Then the rest is done in the code below.
+When all the data is downloaded and placed in the correct folders, the rest is easily done in R. Run the script [preparing_datasets.R](https://github.com/emmaSkarstein/Citizen_Science_Skarstein_master/blob/master/R/preparing_datasets.R) to prepare the data for analysis. This should create the following files:
+
+- "merged.rds" in the "data" file in "Fish_status_survey_of_nordic_lakes",
+- "clean.rds" in the "data" file in "Fish_status_survey_of_nordic_lakes",
+- "clean.rds" in the "data" file in "Nordic_Species_Observation_Services".
+
+Then the rest is done in the code below.
 
 
 ## Loading Norway map

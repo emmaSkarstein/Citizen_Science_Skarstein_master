@@ -97,8 +97,8 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   model0 <- FitModelCustom(stk.survey, stk.ip, stk.pred$stk, stk.test,
                          Formula = formula0, mesh = Mesh$mesh)
   
-  # model5 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
-  #                        Formula = formula5, mesh = Mesh$mesh)
+  model5 <- FitModelCustom(stk.survey, stk.artsobs, stk.ip, stk.pred$stk, stk.test,
+                         Formula = formula5, mesh = Mesh$mesh)
   
   # CALCULATE DIC
   resp <- survey_test$occurrenceStatus
@@ -107,14 +107,15 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   mod_res3 <- CalcLinPred(model3, resp)
   mod_res4 <- CalcLinPred(model4, resp)
   mod_res0 <- CalcLinPred(model0, resp)
-  #mod_res5 <- CalcLinPred(model5, resp)
+  mod_res5 <- CalcLinPred(model5, resp)
   
   
   list(dic0 = mod_res0$deviance,    
        dic1 = mod_res1$deviance, 
        dic2 = mod_res2$deviance, 
        dic3 = mod_res3$deviance, 
-       dic4 = mod_res4$deviance)
+       dic4 = mod_res4$deviance,
+       dic5 = mod_res5$deviance)
 }
 
 parallel::stopCluster(cl)

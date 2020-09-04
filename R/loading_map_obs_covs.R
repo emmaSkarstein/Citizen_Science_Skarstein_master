@@ -49,8 +49,8 @@ Covariates <- SpatialPointsDataFrame(coords = covariateData[,c("decimalLongitude
 env_covariates <- SpatialPointsDataFrame(coords = env_covariateData[,c("decimalLongitude","decimalLatitude")],
                                          data = env_covariateData, 
                                          proj4string = Projection)
-Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates 
-env_covariates <- data.frame(apply(env_covariates@data, 2, scale))  # scale the covariates 
+#Covariates@data <- data.frame(apply(Covariates@data, 2, scale))  # scale the covariates 
+#env_covariates <- data.frame(apply(env_covariates@data, 2, scale))  # scale the covariates 
 
 # Observations
 # The data is always the same, but will possibly be split into different sections for validation

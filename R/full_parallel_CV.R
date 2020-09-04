@@ -8,7 +8,7 @@ library(blockCV)
 library(foreach)
 library(doParallel)
 
-setwd("Citizen_Science_Skarstein_master")
+#setwd("Citizen_Science_Skarstein_master")
 
 # Loading observations and covariates
 source("R/loading_map_obs_covs.R")
@@ -38,7 +38,7 @@ artsobs_traintest <- TrainTest(sb, trout_artsobs, sb$k)
 
 
 # Setting up parallel backend
-cl <- parallel::makeForkCluster(5)
+cl <- parallel::makeForkCluster(4)
 parallel <- TRUE
 if(parallel){
   doParallel::registerDoParallel(cl)
@@ -122,10 +122,10 @@ parallel::stopCluster(cl)
 
 saveRDS(modelList, "R/output/cv_output_4mods.RDS")
 
-#res <- readRDS("R/output/cv_output_4mods.RDS")
+res <- readRDS("R/output/cv_output_4mods.RDS")
 
-#dic_values <- matrix(unlist(res), ncol = 6)
-#rowMeans(dic_values)
-
+res_mat <- data.frame(do.call("cbind", res))
+res_mat[] <- lapply(res_mat, as.numeric)
+rowMeans(res_mat)
 
 

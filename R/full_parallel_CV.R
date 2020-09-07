@@ -8,7 +8,7 @@ library(blockCV)
 library(foreach)
 library(doParallel)
 
-#setwd("Citizen_Science_Skarstein_master")
+setwd("Citizen_Science_Skarstein_master")
 
 # Loading observations and covariates
 source("R/loading_map_obs_covs.R")

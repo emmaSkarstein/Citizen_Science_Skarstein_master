@@ -2,13 +2,12 @@
 
 
 # Model validation
-# Training and test sets
 
 library(blockCV)
 library(foreach)
 library(doParallel)
 
-setwd("Citizen_Science_Skarstein_master")
+setwd("Citizen_Science_Skarstein_master") # This is for running on external servers, can be removed when running locally
 
 # Loading observations and covariates
 source("R/loading_map_obs_covs.R")
@@ -55,8 +54,6 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   # artsobs_test: we don't use the CS data for testing.
   
   # MAKE STACKS
-  # (note: strictly speaking intergation and prediction stack could have been made 
-  #  outside the loop, but don't thing they matter so much)
   stks <- MakeStacks(data_structured = survey_train, data_unstructured = artsobs_train,
                      env_covariates = env_covariates, all_covariates = Covariates, Mesh = Mesh)
 
@@ -110,12 +107,12 @@ modelList <- foreach::foreach(i = 1:k) %dopar% {
   mod_res5 <- CalcLinPred(model5, resp)
   
   
-  list(dic0 = mod_res0$deviance,    
-       dic1 = mod_res1$deviance, 
-       dic2 = mod_res2$deviance, 
-       dic3 = mod_res3$deviance, 
-       dic4 = mod_res4$deviance,
-       dic5 = mod_res5$deviance)
+  list(model0 = mod_res0$deviance,    
+       model1 = mod_res1$deviance, 
+       model2 = mod_res2$deviance, 
+       model3 = mod_res3$deviance, 
+       model4 = mod_res4$deviance,
+       model5 = mod_res5$deviance)
 }
 
 parallel::stopCluster(cl)
